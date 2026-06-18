@@ -1,24 +1,25 @@
-"""兄弟能力包动态加载器（与 cwd / 仓库目录名 / 连字符无关）。
+"""Dynamic loader for sibling capability packages (independent of cwd / repo directory name / hyphens).
 
-为什么需要这个模块？
-====================
-能力包目录命名采用连字符（如 ``knowledge-base``、``human-handoff``），
-而 Python ``import`` 语法不能识别连字符。再加上 ``start.sh`` 进程的
-工作目录是 ``capabilities/conversation-core/``，项目根并不在
-``sys.path`` 中。因此 manifest.yaml 中那种::
+Why this module?
+================
+Capability directories use hyphenated names (e.g. ``knowledge-base``, ``human-handoff``),
+but Python ``import`` syntax cannot recognize hyphens. Additionally, the ``start.sh``
+process working directory is ``capabilities/conversation-core/``, so the project root
+is NOT in ``sys.path``. Therefore, the import style in manifest.yaml:
 
     from capabilities.knowledge_base.src.retriever import attach_faq_to_instructions
 
-的写法**永远不会工作**——它隐含假设了：
-1. 目录名是下划线（实际是连字符）；
-2. 项目根在 ``sys.path``（实际不在）。
+will **never work** — it implicitly assumes:
+1. Directory names use underscores (they actually use hyphens);
+2. The project root is in ``sys.path`` (it is not).
 
-本模块通过 ``importlib.util`` 把每一层目录主动注册为合法 Python 包，
-绕过包名限制；项目根通过 ``__file__`` 反推得到，因此**仓库目录被任意
-改名也不影响**。子模块内的 ``from .x import y`` 等相对导入也能正常工作。
+This module uses ``importlib.util`` to proactively register each directory level as a
+valid Python package, bypassing package name restrictions; the project root is derived
+from ``__file__``, so **renaming the repo directory has no effect**. Relative imports
+such as ``from .x import y`` inside sub-modules also work correctly.
 
-用法
-----
+Usage
+-----
     from ._capability_loader import load_capability
 
     retriever = load_capability("knowledge-base", "src/retriever.py")
@@ -40,8 +41,8 @@ from typing import Optional
 logger = logging.getLogger(__name__)
 
 # ---------------------------------------------------------------------------
-# 路径解析：__file__ 反推 repo_root，不依赖 cwd / 仓库目录名
-# 该文件位于 <repo_root>/capabilities/conversation-core/src/_capability_loader.py
+# Path resolution: derive repo_root from __file__, independent of cwd / repo directory name
+# This file is at <repo_root>/capabilities/conversation-core/src/_capability_loader.py
 # parents[3] = <repo_root>
 # ---------------------------------------------------------------------------
 _HERE = Path(__file__).resolve()
@@ -55,7 +56,7 @@ _module_cache: dict[str, ModuleType] = {}
 
 
 def repo_root() -> Path:
-    """返回仓库根目录（含 ``capabilities/`` 子目录的那一层）。"""
+    """Return the repo root directory (the level containing ``capabilities/``)."""
     return _REPO_ROOT
 
 
@@ -64,12 +65,12 @@ def capabilities_root() -> Path:
 
 
 def _safe_name(part: str) -> str:
-    """把目录段转成合法 Python identifier（连字符 → 下划线）。"""
+    """Convert a directory segment to a valid Python identifier (hyphens → underscores)."""
     return part.replace("-", "_")
 
 
 def _ensure_namespace_root() -> ModuleType:
-    """注册 ``_capabilities`` 顶层命名空间包到 ``sys.modules``。"""
+    """Register the ``_capabilities`` top-level namespace package in ``sys.modules``."""
     mod = sys.modules.get(_CAPS_NAMESPACE)
     if mod is not None:
         return mod
@@ -77,16 +78,16 @@ def _ensure_namespace_root() -> ModuleType:
     if spec is None:
         raise RuntimeError("failed to build namespace spec")
     mod = importlib.util.module_from_spec(spec)
-    mod.__path__ = [str(_CAPABILITIES_ROOT)]  # 让 importlib 能在该目录下查找子包
+    mod.__path__ = [str(_CAPABILITIES_ROOT)]  # Let importlib find sub-packages under this directory
     sys.modules[_CAPS_NAMESPACE] = mod
     return mod
 
 
 def _ensure_package(qualified_name: str, dir_path: Path) -> ModuleType:
-    """把 ``dir_path`` 注册为名为 ``qualified_name`` 的 Python 包。
+    """Register ``dir_path`` as a Python package named ``qualified_name``.
 
-    若同名 ``__init__.py`` 存在则正常 exec，否则按命名空间包处理。
-    幂等：已在 ``sys.modules`` 中则直接返回。
+    If a ``__init__.py`` with the same name exists, exec it normally; otherwise treat as a namespace package.
+    Idempotent: if already in ``sys.modules``, returns immediately.
     """
     cached = sys.modules.get(qualified_name)
     if cached is not None:
@@ -119,25 +120,25 @@ def _ensure_package(qualified_name: str, dir_path: Path) -> ModuleType:
 
 
 def load_capability(cap_name: str, module_rel: str) -> ModuleType:
-    """加载指定能力包下的某个 Python 文件并返回 module 对象。
+    """Load a Python file under a given capability package and return its module object.
 
     Parameters
     ----------
     cap_name
-        能力包目录名，例如 ``"knowledge-base"``（带连字符）。
+        Capability directory name, e.g. ``"knowledge-base"`` (with hyphens).
     module_rel
-        相对能力包根的 Python 文件路径，例如 ``"src/retriever.py"``。
+        Python file path relative to the capability root, e.g. ``"src/retriever.py"``.
 
     Returns
     -------
     ModuleType
-        已执行的模块对象。失败时抛出 :class:`ModuleNotFoundError`。
+        The executed module object. Raises :class:`ModuleNotFoundError` on failure.
 
-    备注
-    ----
-    - 进程内缓存：相同 ``(cap_name, module_rel)`` 仅加载一次。
-    - 模块完整名形如 ``_capabilities.<cap_safe>.<dir>.<basename>``，
-      因此能力包内部 ``from .x import y`` 等相对导入可以正常工作。
+    Notes
+    -----
+    - In-process cache: the same ``(cap_name, module_rel)`` is loaded only once.
+    - Full module name is e.g. ``_capabilities.<cap_safe>.<dir>.<basename>``,
+      so relative imports like ``from .x import y`` inside capabilities work correctly.
     """
     cache_key = f"{cap_name}::{module_rel}"
     with _lock:
@@ -152,15 +153,15 @@ def load_capability(cap_name: str, module_rel: str) -> ModuleType:
             f"capability '{cap_name}' module '{module_rel}' not found at {file_path}"
         )
 
-    # 1) 顶层命名空间 _capabilities.*
+    # 1) Top-level namespace _capabilities.*
     _ensure_namespace_root()
 
-    # 2) 能力包包名 _capabilities.<cap_safe>
+    # 2) Capability package name _capabilities.<cap_safe>
     cap_safe = _safe_name(cap_name)
     cap_qual = f"{_CAPS_NAMESPACE}.{cap_safe}"
     _ensure_package(cap_qual, cap_dir)
 
-    # 3) 中间目录每一层都注册为子包
+    # 3) Register each intermediate directory level as a sub-package
     rel_parts = Path(module_rel).parts
     *dir_parts, leaf = rel_parts
     parent_qual = cap_qual
@@ -170,7 +171,7 @@ def load_capability(cap_name: str, module_rel: str) -> ModuleType:
         parent_qual = f"{parent_qual}.{_safe_name(part)}"
         _ensure_package(parent_qual, parent_dir)
 
-    # 4) 叶子模块加载
+    # 4) Load leaf module
     leaf_basename = Path(leaf).stem
     leaf_qual = f"{parent_qual}.{_safe_name(leaf_basename)}"
 
@@ -202,9 +203,10 @@ def load_capability(cap_name: str, module_rel: str) -> ModuleType:
 def try_load_capability(
     cap_name: str, module_rel: str
 ) -> Optional[ModuleType]:
-    """与 :func:`load_capability` 相同，但失败时返回 ``None`` 而不抛异常。
+    """Same as :func:`load_capability`, but returns ``None`` on failure instead of raising.
 
-    适合"能力包可选安装"的场景：找不到时静默降级，不影响骨架运行。
+    Suitable for "capability is optionally installed" scenarios: silently degrades
+    on missing, without affecting skeleton operation.
     """
     try:
         return load_capability(cap_name, module_rel)

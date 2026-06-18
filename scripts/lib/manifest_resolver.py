@@ -1,14 +1,14 @@
-"""能力包 manifest 加载 / 依赖图 / 拓扑排序 / 循环依赖检测。
+"""Capability manifest loading / dependency graph / topological sort / circular dependency detection.
 
-对应风险：
-- P1 manifest 依赖解析边界未覆盖：通过拓扑排序检测循环依赖；
-  semver 主版本不兼容时阻止安装。
+Corresponding risks:
+- P1 manifest dependency resolution boundary not covered: use topological sort to detect circular dependencies;
+  block installation on semver major version incompatibility.
 
-约定：
-- 每个能力包目录下必须有 ``manifest.yaml``。
-- ``type`` 字段为 ``skeleton`` | ``capability``，骨架包必须存在且唯一。
-- ``dependencies`` 元素形如 ``{name: conversation-core, version: ">=1.0.0,<2.0.0"}``。
-- ``injection_points`` 与 ``extensions[*].inject_at`` 通过 ``id`` 字段对齐。
+Conventions:
+- Each capability directory must contain ``manifest.yaml``.
+- ``type`` field is ``skeleton`` | ``capability``; skeleton packages must exist and be unique.
+- ``dependencies`` entries are of the form ``{name: conversation-core, version: ">=1.0.0,<2.0.0"}``.
+- ``injection_points`` and ``extensions[*].inject_at`` are aligned via the ``id`` field.
 """
 from __future__ import annotations
 
@@ -21,31 +21,31 @@ import yaml
 
 
 # ---------------------------------------------------------------------------
-# 异常
+# Exceptions
 # ---------------------------------------------------------------------------
 class ManifestError(RuntimeError):
-    """manifest 加载或校验失败。"""
+    """Manifest load or validation failure."""
 
 
 class CircularDependencyError(ManifestError):
-    """检测到循环依赖。"""
+    """Circular dependency detected."""
 
 
 class VersionConflictError(ManifestError):
-    """semver 主版本不兼容。"""
+    """Semver major version incompatible."""
 
 
 class UnknownInjectionPointError(ManifestError):
-    """能力包引用了骨架未声明的注入点。"""
+    """Capability references an injection point not declared by the skeleton."""
 
 
 # ---------------------------------------------------------------------------
-# 数据模型
+# Data models
 # ---------------------------------------------------------------------------
 @dataclass(frozen=True)
 class DependencySpec:
     name: str
-    version: str = "*"  # semver range，如 ">=1.0.0,<2.0.0"
+    version: str = "*"  # semver range, e.g., ">=1.0.0,<2.0.0"
 
 
 @dataclass
@@ -61,7 +61,7 @@ class Manifest:
     integration: Dict = field(default_factory=dict)
     security: Dict = field(default_factory=dict)
     endpoints: List[Dict] = field(default_factory=list)
-    path: Optional[Path] = None  # 加载时回填
+    path: Optional[Path] = None  # filled in at load time
 
     @property
     def is_skeleton(self) -> bool:
@@ -69,7 +69,7 @@ class Manifest:
 
 
 # ---------------------------------------------------------------------------
-# 加载
+# Loading
 # ---------------------------------------------------------------------------
 def _coerce_dep(raw) -> DependencySpec:
     if isinstance(raw, str):
@@ -113,7 +113,7 @@ def load_manifest(manifest_path: Path) -> Manifest:
 
 
 def discover_manifests(capabilities_root: Path) -> List[Manifest]:
-    """扫描 capabilities/ 下的所有能力包 manifest。"""
+    """Scan all capability manifests under capabilities/."""
     manifests: List[Manifest] = []
     if not capabilities_root.exists():
         return manifests
@@ -127,7 +127,7 @@ def discover_manifests(capabilities_root: Path) -> List[Manifest]:
 
 
 # ---------------------------------------------------------------------------
-# semver 兼容性
+# Semver compatibility
 # ---------------------------------------------------------------------------
 _SEMVER_RE = re.compile(r"^(\d+)\.(\d+)\.(\d+)")
 
@@ -148,7 +148,7 @@ def _check_single(actual: Tuple[int, int, int], spec: str) -> bool:
         return True
     m = _RANGE_RE.match(spec)
     if not m:
-        # 无法解析的范围视为通过（保守策略，记录于日志由调用方负责）
+        # Unparseable range treated as pass-through (conservative strategy, logged by caller)
         return True
     op = m.group(1) or "="
     parts = [int(p) for p in m.group(2).split(".")]
@@ -165,15 +165,15 @@ def _check_single(actual: Tuple[int, int, int], spec: str) -> bool:
         return actual < target
     if op == "<=":
         return actual <= target
-    if op == "^":  # 主版本兼容
+    if op == "^":  # major version compatible
         return actual >= target and actual[0] == target[0]
-    if op == "~":  # 次版本兼容
+    if op == "~":  # minor version compatible
         return actual >= target and actual[:2] == target[:2]
     return True
 
 
 def satisfies(actual_version: str, spec: str) -> bool:
-    """判断 actual 是否落入 spec（支持 ',' 拼接的 AND 关系）。"""
+    """Check whether actual falls within spec (supports ','-joined AND relations)."""
     if not spec or spec == "*":
         return True
     actual = _parse_version(actual_version)
@@ -181,26 +181,26 @@ def satisfies(actual_version: str, spec: str) -> bool:
 
 
 # ---------------------------------------------------------------------------
-# 拓扑排序 / 循环依赖检测
+# Topological sort / circular dependency detection
 # ---------------------------------------------------------------------------
 @dataclass
 class ResolvedGraph:
-    order: List[str]               # 拓扑序后的能力包名列表
+    order: List[str]               # Topologically sorted capability names
     manifests: Dict[str, Manifest]
     skeleton: Manifest
 
 
 def resolve(manifests: Sequence[Manifest]) -> ResolvedGraph:
-    """构建依赖图、校验版本兼容并返回拓扑序。
+    """Build dependency graph, validate version compatibility, and return topological order.
 
     Raises
     ------
     ManifestError
-        无骨架 / 多个骨架 / 引用未知能力包 / 版本不兼容。
+        No skeleton / multiple skeletons / reference to unknown capability / version incompatible.
     CircularDependencyError
-        检测到环。
+        Cycle detected.
     """
-    # 1) 唯一性 + 骨架定位
+    # 1) Uniqueness + skeleton identification
     by_name: Dict[str, Manifest] = {}
     for m in manifests:
         if m.name in by_name:
@@ -215,7 +215,7 @@ def resolve(manifests: Sequence[Manifest]) -> ResolvedGraph:
         )
     skeleton = skeletons[0]
 
-    # 2) 引用 + 版本校验
+    # 2) Reference + version validation
     for m in manifests:
         for dep in m.dependencies:
             if dep.name not in by_name:
@@ -229,14 +229,14 @@ def resolve(manifests: Sequence[Manifest]) -> ResolvedGraph:
                     f"{target.version}"
                 )
 
-    # 3) 注入点引用校验（仅校验注入到骨架的）
+    # 3) Injection point reference validation (only validates injections into skeleton)
     skeleton_ids = {p.get("id") for p in skeleton.injection_points if p.get("id")}
     for m in manifests:
         for ext in m.extensions:
             inject_id = ext.get("inject_at")
             if not inject_id:
                 continue
-            # 允许引用其他能力包暴露的注入点（前缀 cap:能力名/注入点id）
+            # Allow references to injection points exposed by other capabilities (prefix cap:<capability>/<injection_id>)
             if ":" in inject_id:
                 continue
             if inject_id not in skeleton_ids:
@@ -245,7 +245,7 @@ def resolve(manifests: Sequence[Manifest]) -> ResolvedGraph:
                     f"(skeleton declares: {sorted(skeleton_ids)})"
                 )
 
-    # 4) 拓扑排序（Kahn 算法）
+    # 4) Topological sort (Kahn's algorithm)
     indeg: Dict[str, int] = {n: 0 for n in by_name}
     adj: Dict[str, List[str]] = {n: [] for n in by_name}
     for m in manifests:
@@ -267,14 +267,14 @@ def resolve(manifests: Sequence[Manifest]) -> ResolvedGraph:
             f"circular dependency detected among: {remaining}"
         )
 
-    # 骨架必须排在最前
+    # Skeleton must come first
     if skeleton.name not in order or order[0] != skeleton.name:
         order = [skeleton.name] + [n for n in order if n != skeleton.name]
     return ResolvedGraph(order=order, manifests=by_name, skeleton=skeleton)
 
 
 # ---------------------------------------------------------------------------
-# 工具：导出依赖图 DOT
+# Utility: export dependency graph as DOT
 # ---------------------------------------------------------------------------
 def to_dot(graph: ResolvedGraph) -> str:
     lines = ["digraph capabilities {", "  rankdir=LR;"]

@@ -1,10 +1,10 @@
-"""knowledge-base FastAPI 子路由。
+"""knowledge-base FastAPI sub-router.
 
-挂载到骨架：app.include_router(router, prefix="/api/v1/kb")
+Mounted on skeleton: app.include_router(router, prefix="/api/v1/kb")
 
-改造说明：
-- 业务逻辑全部委托到 core.service.KbService
-- 响应字段保持与 Phase 2 完全一致（沿用 SearchHit.to_dict / FaqEntry.to_dict）
+Refactoring notes:
+- All business logic delegated to core.service.KbService
+- Response fields remain fully consistent with Phase 2 (using SearchHit.to_dict / FaqEntry.to_dict)
 """
 from __future__ import annotations
 

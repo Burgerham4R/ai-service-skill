@@ -1,4 +1,4 @@
-"""human-handoff core 模块。"""
+"""human-handoff core module."""
 from .intent_detector import IntentDetector, is_handoff_intent
 from .models import (
     OverallStatus,

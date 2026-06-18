@@ -1,47 +1,47 @@
-# session-summary · 会话纪要 + 结构化摘要
+# session-summary · Session Summary + Structured Abstract
 
-> 在 conversation-core 之上自动归档每个 session 的轮次记录，
-> 调用 `finalize` 后产出结构化摘要（topics / intents / next_actions）。
+> Auto-archives turn records for each session on top of conversation-core,
+> and produces structured summaries (topics / intents / next_actions) after calling `finalize`.
 
-## 安装
+## Install
 
 ```bash
 python scripts/add-capability.py session-summary
 ```
 
-## 配置
+## Configuration
 
-| 环境变量 | 默认 | 说明 |
+| Env Variable | Default | Description |
 |:---|:---|:---|
-| `SS_STORAGE_DIR`    | `capabilities/session-summary/data/` | 纪要落盘目录（权限 0600） |
-| `SS_RETENTION_DAYS` | `30` | 保留天数，过期自动清理 |
-| `SS_LLM_SUMMARY`    | `true` | 是否调用 LLM 二次总结（依赖 `LLM_API_KEY`） |
+| `SS_STORAGE_DIR`    | `capabilities/session-summary/data/` | Summary landing directory (permissions 0600) |
+| `SS_RETENTION_DAYS` | `30` | Retention days; auto-cleanup after expiry |
+| `SS_LLM_SUMMARY`    | `true` | Whether to call LLM for secondary summarization (depends on `LLM_API_KEY`) |
 
 ## REST API
 
-| 方法 | 路径 | 用途 |
+| Method | Path | Purpose |
 |:---|:---|:---|
-| GET  | `/api/v1/summary/_list?_offset=0&_limit=20` | 最近纪要列表 |
-| GET  | `/api/v1/summary/{session_id}` | 单会话纪要详情 |
-| POST | `/api/v1/summary/{session_id}/finalize` | 关闭会话并触发摘要 |
+| GET  | `/api/v1/summary/_list?_offset=0&_limit=20` | Recent summary list |
+| GET  | `/api/v1/summary/{session_id}` | Single session summary details |
+| POST | `/api/v1/summary/{session_id}/finalize` | Close session and trigger summary |
 
-## 摘要输出
+## Summary Output
 
 ```json
 {
-  "topics":       ["订单", "shipping"],
-  "user_intents": ["订单何时发货？"],
-  "next_actions": ["请帮我修改地址"],
+  "topics":       ["order", "shipping"],
+  "user_intents": ["When will my order ship?"],
+  "next_actions": ["Please update my address"],
   "highlights":   ["12 turns recorded"],
   "engine":       "heuristic",
   "model":        null
 }
 ```
 
-LLM 路径失败会自动降级到本地启发式实现，保证离线可用。
+LLM path falls back to local heuristic implementation on failure, ensuring offline availability.
 
-## 安全
+## Security
 
-- 落盘文件权限强制 `0600`
-- 写入前对 `secret_id / api_key / token / credential` 等字段执行脱敏
-- 转写文本最大长度 `4096`
+- Disk file permissions enforced to `0600`
+- Sensitive fields (`secret_id / api_key / token / credential`) redacted before writing
+- Transcript text max length `4096`

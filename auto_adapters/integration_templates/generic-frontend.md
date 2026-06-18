@@ -1,31 +1,31 @@
-# 通用前端集成指南（L2 半自动）
+# Generic Frontend Integration Guide (L2 Semi-Auto)
 
-> 当 Agent 已识别到你的前端技术栈，但自动渲染因路径冲突或语法异常失败时，
-> 请按以下步骤手动完成集成。
+> When the Agent has identified your frontend tech stack but auto-rendering failed due to path conflicts or syntax errors,
+> follow these steps to complete the integration manually.
 
-## 第 1 步 · 安装依赖
+## Step 1 · Install Dependencies
 
 ```bash
 npm install trtc-sdk-v5
 ```
 
-## 第 2 步 · 复制组件模板
+## Step 2 · Copy Component Template
 
-按你的框架从仓库 `auto_adapters/frontend-spa/` 选择对应模板：
+Choose the corresponding template from `auto_adapters/frontend-spa/` based on your framework:
 
 - React / Next:  `react/VoiceAgent.tsx.tpl`
 - Vue:           `vue/VoiceAgent.vue.tpl`
 - Angular:       `angular/voice-agent.component.ts.tpl`
 
-把模板内容复制到你项目的组件目录，并把以下占位变量替换为真实值：
+Copy the template content to your project's components directory and replace these placeholder variables with real values:
 
-| 占位 | 默认 | 说明 |
+| Placeholder | Default | Description |
 |:---|:---|:---|
-| `${SKELETON_BASE_URL}` | `http://localhost:3000` | 骨架进程地址 |
-| `${API_PREFIX}` | `/api/v1` | 骨架 REST 前缀 |
-| `${COMPONENT_NAME}` | `VoiceAgent` | 组件 / 文件名 |
+| `${SKELETON_BASE_URL}` | `http://localhost:3000` | Skeleton process address |
+| `${API_PREFIX}` | `/api/v1` | Skeleton REST prefix |
+| `${COMPONENT_NAME}` | `VoiceAgent` | Component / file name |
 
-## 第 3 步 · 在父组件中挂载
+## Step 3 · Mount in Parent Component
 
 ```tsx
 import { VoiceAgent } from './components/VoiceAgent';
@@ -35,17 +35,17 @@ export default function Page() {
 }
 ```
 
-## 第 4 步 · CSP 与 HTTPS
+## Step 4 · CSP & HTTPS
 
-如果生产环境部署了 CSP，请追加：
+If CSP is deployed in production, append:
 
 ```
 connect-src https://${SKELETON_BASE_URL} wss://*.trtc.tencent-cloud.com;
 ```
 
-## 第 5 步 · 验证
+## Step 5 · Verify
 
-打开页面，应看到顶部三盏灯：`tencent_cloud / trtc / llm`。
-均为绿色后点击 `Start` 即可入房与 AI 对话。
+Open the page; you should see three LEDs at the top: `tencent_cloud / trtc / llm`.
+Once all are green, click `Start` to join the room and talk to the AI.
 
-如有任何一盏灯红色，按页面控制台输出的诊断 JSON 检查 `.env` 与三把 Key。
+If any LED is red, check `.env` and the 3 keys based on the diagnostic JSON output in the page console.

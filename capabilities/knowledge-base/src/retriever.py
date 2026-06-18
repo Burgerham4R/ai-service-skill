@@ -1,37 +1,37 @@
-"""retriever.py —— 兼容 facade。
+"""retriever.py — compatibility facade.
 
-保留原 `attach_faq_to_instructions` / `get_retriever` / `FaqEntry` / `SearchHit`
-公共符号，供 manifest.extensions（agent.before_start）和外部调用方继续使用。
+Keeps the original `attach_faq_to_instructions` / `get_retriever` / `FaqEntry` / `SearchHit`
+public symbols for manifest.extensions (agent.before_start) and external callers to continue using.
 
-新代码请直接使用：
-- adapters.factory.get_client()        获取 KnowledgeBaseClient 实例
-- core.service.get_default_service()   获取 KbService 实例
+New code should use directly:
+- adapters.factory.get_client()        Get KnowledgeBaseClient instance
+- core.service.get_default_service()   Get KbService instance
 """
 from __future__ import annotations
 
 import warnings
 
-from .core.models import FaqEntry, SearchHit  # noqa: F401  (公共 API)
+from .core.models import FaqEntry, SearchHit  # noqa: F401  (public API)
 from .core.service import get_default_service
 
 
 def attach_faq_to_instructions(instructions: str) -> str:
-    """供 conversation-core.before_start 注入点使用。
+    """For use by conversation-core.before_start injection point.
 
-    保持旧签名：单参数 instructions，返回拼接后的 instructions。
+    Keeps old signature: single instructions parameter, returns concatenated instructions.
     """
     return get_default_service().attach_faq_to_instructions(instructions)
 
 
 # --------------------------------------------------------------------
-# 弃用 shim：原 FaqRetriever 全局实例 / 类
+# Deprecated shim: original FaqRetriever global instance / class
 # --------------------------------------------------------------------
 def get_retriever():
-    """[DEPRECATED] 返回 KnowledgeBaseClient 实例。
+    """[DEPRECATED] Return KnowledgeBaseClient instance.
 
-    旧 FaqRetriever 类的方法名（list_entries/upsert/delete/search/reload）
-    在新 client 上有对应方法（list_all/upsert/delete/search/reload），
-    但部分签名略有差异（list_entries -> list_all）。
+    Old FaqRetriever class method names (list_entries/upsert/delete/search/reload)
+    have corresponding methods on the new client (list_all/upsert/delete/search/reload),
+    though some signatures differ slightly (list_entries -> list_all).
     """
     warnings.warn(
         "knowledge_base.retriever.get_retriever() is deprecated; "
@@ -43,7 +43,7 @@ def get_retriever():
     return get_client()
 
 
-# 兼容旧别名
+# Legacy alias
 FaqRetriever = "FaqRetriever (deprecated; use adapters.local_json.LocalJsonKbClient)"
 
 

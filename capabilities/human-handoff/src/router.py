@@ -1,11 +1,11 @@
-"""human-handoff FastAPI 子路由。
+"""human-handoff FastAPI sub-router.
 
-挂载到骨架：app.include_router(router, prefix="/api/v1/handoff")
+Mounted on skeleton: app.include_router(router, prefix="/api/v1/handoff")
 
-改造说明：
-- 业务逻辑全部委托到 core.service.HandoffService
-- 响应字段保持与 Phase 2 完全一致（to_legacy_dict），不破坏 Web Demo
-- 新增 /admin/* 子段供 Phase 3 路径 A 的工单坐席看板使用
+Refactoring notes:
+- All business logic delegated to core.service.HandoffService
+- Response fields remain fully consistent with Phase 2 (to_legacy_dict), not breaking Web Demo
+- New /admin/* sub-routes for Phase 3 Path A ticket agent dashboard
 """
 from __future__ import annotations
 
@@ -22,7 +22,7 @@ router = APIRouter()
 
 
 # ---------------------------------------------------------------------------
-# 请求体
+# Request body
 # ---------------------------------------------------------------------------
 class RequestBody(BaseModel):
     session_id: str = Field(..., max_length=64)
@@ -44,7 +44,7 @@ class AdminUpdateBody(BaseModel):
 
 
 # ---------------------------------------------------------------------------
-# 现有端点（与 Phase 2 完全兼容）
+# Existing endpoints (fully compatible with Phase 2)
 # ---------------------------------------------------------------------------
 @router.get("/status")
 def overall() -> dict:
@@ -90,10 +90,10 @@ def cancel(body: CancelBody) -> dict:
 
 
 # ---------------------------------------------------------------------------
-# 新增：工单坐席看板专用端点（Phase 3 路径 A 使用）
-# 路径：/admin/tickets
-# 这些端点输出"新版"字段（含 ticket_id / subject / priority / transcript），
-# 与现有 /handoff/{session_id} 的旧字段格式并存。
+# New: Ticket agent dashboard endpoints (Phase 3 Path A)
+# Path: /admin/tickets
+# These endpoints output "new version" fields (including ticket_id / subject / priority / transcript),
+# coexisting with the legacy field format of existing /handoff/{session_id}.
 # ---------------------------------------------------------------------------
 @router.get("/admin/tickets")
 def admin_list_tickets(
@@ -126,7 +126,7 @@ def admin_get_ticket(ticket_id: str) -> dict:
 
 @router.post("/admin/tickets/{ticket_id}/status")
 def admin_update_status(ticket_id: str, body: AdminUpdateBody) -> dict:
-    # 校验 status 取值
+    # Validate status value
     try:
         TicketStatusEnum(body.status)
     except ValueError as exc:

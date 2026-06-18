@@ -1,7 +1,7 @@
-"""日志脱敏过滤器（P0 安全项落地）。
+"""Log redaction filter (P0 security requirement implemented).
 
-按 manifest.yaml security.log_redaction.patterns 中声明的关键词，
-对凭证字段在日志记录前执行不可逆掩码处理。
+Performs irreversible masking of credential fields in log records before logging,
+based on the keywords declared in manifest.yaml security.log_redaction.patterns.
 """
 from __future__ import annotations
 
@@ -9,7 +9,7 @@ import logging
 import re
 from typing import Iterable
 
-# 默认匹配的敏感字段名（与 manifest.yaml security.log_redaction.patterns 对齐）
+# Default sensitive field names to match (aligned with manifest.yaml security.log_redaction.patterns)
 _DEFAULT_PATTERNS = (
     "secret_id",
     "secret_key",
@@ -23,7 +23,7 @@ _DEFAULT_PATTERNS = (
 
 
 def _build_regex(patterns: Iterable[str]) -> re.Pattern[str]:
-    # 命中 key=value / "key": "value" / key: value 三种常见格式
+    # Matches three common formats: key=value / "key": "value" / key: value
     keys = "|".join(re.escape(p) for p in patterns)
     pattern = (
         r"(?i)(?P<key>" + keys + r")"
@@ -40,7 +40,7 @@ def _mask(value: str) -> str:
 
 
 class RedactingFilter(logging.Filter):
-    """对日志 message / args 中的敏感字段执行掩码。"""
+    """Mask sensitive fields in log messages / args."""
 
     def __init__(self, patterns: Iterable[str] = _DEFAULT_PATTERNS) -> None:
         super().__init__()
@@ -63,13 +63,13 @@ class RedactingFilter(logging.Filter):
                     else a
                     for a in record.args
                 )
-        except Exception:  # 脱敏失败不能影响日志主流程
+        except Exception:  # Redaction failure must not affect the main logging flow
             pass
         return True
 
 
 def install_redacting_filter(logger: logging.Logger | None = None) -> None:
-    """将脱敏过滤器挂载到指定 Logger（默认根 Logger）。"""
+    """Attach the redacting filter to the specified Logger (defaults to root Logger)."""
     target = logger or logging.getLogger()
     if any(isinstance(f, RedactingFilter) for f in target.filters):
         return

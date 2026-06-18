@@ -1,4 +1,4 @@
-"""local_json 写回 sink —— 追加到本地 JSONL，便于离线核对。"""
+"""local_json write-back sink — append to local JSONL for offline verification."""
 from __future__ import annotations
 
 import hashlib

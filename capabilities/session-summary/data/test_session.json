@@ -5,12 +5,12 @@
   "turns": [
     {
       "role": "user",
-      "text": "我想查询订单 A1234，物流多久到？",
+      "text": "Can you check the delivery status of order A1234?",
       "ts": 1780905036.26798
     },
     {
       "role": "assistant",
-      "text": "通常 3-5 个工作日。",
+      "text": "Usually 3-5 business days.",
       "ts": 1780905036.2682061
     }
   ],

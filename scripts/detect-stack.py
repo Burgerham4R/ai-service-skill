@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-"""技术栈检测 CLI。
+"""Tech stack detection CLI.
 
-用法：
+Usage:
     python scripts/detect-stack.py /path/to/user/project
     python scripts/detect-stack.py /path/to/user/project --json
 """
@@ -20,8 +20,8 @@ from scripts.lib import stack_detector as sd
 
 
 def main() -> None:
-    parser = argparse.ArgumentParser(description="技术栈检测 CLI")
-    parser.add_argument("project", type=Path, help="目标项目根目录")
+    parser = argparse.ArgumentParser(description="Tech stack detection CLI")
+    parser.add_argument("project", type=Path, help="Target project root directory")
     parser.add_argument("--json", action="store_true")
     args = parser.parse_args()
 

@@ -1,59 +1,59 @@
-# conversation-core · 快速开始
+# conversation-core · Quick Start
 
-> 配置 → 运行 → 验证，三步搞定。
+> Configure → Run → Verify, done in three steps.
 
-## 0. 前置依赖
+## 0. Prerequisites
 
 - Python ≥ 3.9
-- 已开通：腾讯云账户 + TRTC Conversational AI 应用 + 任一 OpenAI 兼容 LLM 服务
+- Activated: Tencent Cloud account + TRTC Conversational AI application + any OpenAI-compatible LLM service
 
-## 1. 安装
+## 1. Install
 
 ```bash
-# 在仓库根目录
+# From repo root
 pip install -r capabilities/conversation-core/requirements.txt
 ```
 
-## 2. 配置三把 Key
+## 2. Configure the 3 Keys
 
 ```bash
 python scripts/setup-credentials.py
 ```
 
-脚本会按 `[1/3] 腾讯云 → [2/3] TRTC → [3/3] LLM` 顺序交互式引导，每把 Key
-输入后立即自检。失败不进入下一把；中途中断后再次执行会自动跳过已通过的
-Key（断点续配）。
+The script interactively guides you through `[1/3] Tencent Cloud → [2/3] TRTC → [3/3] LLM` in order,
+running a self-check immediately after each key is entered. On failure, it won't proceed to the next key;
+if interrupted mid-way, re-running it will auto-skip keys that already passed (checkpoint resume).
 
-成功后产物：
+Output artifacts on success:
 
-| 路径 | 内容 | 权限 |
+| Path | Contents | Permissions |
 |:---|:---|:---:|
-| `.env` | 三把 Key 的环境变量声明 | 600 |
-| `.credentials_cache` | 已通过验证的 Key 摘要（SHA256） | 600 |
-| `config-report.json` | 各 Key 的验证时间 / 延迟 / 状态 | 644 |
+| `.env` | Environment variable declarations for the 3 keys | 600 |
+| `.credentials_cache` | SHA256 hashes of verified keys | 600 |
+| `config-report.json` | Verification timestamp / latency / status for each key | 644 |
 
-## 3. 启动 Web Demo
+## 3. Launch Web Demo
 
 ```bash
 bash start.sh
-# 等价：
+# Equivalent to:
 # cd capabilities/conversation-core && python -m src.server
 ```
 
-浏览器访问 <http://localhost:3000>。
+Open <http://localhost:3000> in your browser.
 
-## 4. 验收标准
+## 4. Acceptance Criteria
 
-- [x] ASR/LLM/TTS 链路无业务硬编码（仅做协议透传）
-- [x] `setup-credentials.py` 支持实时连通性自检与断点续配
-- [x] Web Demo 顶部状态栏三盏指示灯全绿
-- [x] manifest.yaml 包含 skeleton 类型 / 注入点 / 模态 / 安全声明
-- [x] INTEGRATION.md 提供 Agent 可读的检测逻辑与三级降级路径
-- [x] `.credentials_cache` / `.env` 权限 600，日志中无明文 Key
+- [x] ASR/LLM/TTS pipeline has no hard-coded business logic (protocol passthrough only)
+- [x] `setup-credentials.py` supports real-time connectivity self-check and checkpoint resume
+- [x] Web Demo top status bar: all three indicator LEDs green
+- [x] manifest.yaml includes skeleton type / injection points / modality / security declarations
+- [x] INTEGRATION.md provides Agent-readable detection logic and three-level degradation path
+- [x] `.credentials_cache` / `.env` permissions 600; no plain-text keys in logs
 
-## 5. 后续步骤
+## 5. Next Steps
 
-按 `manifest.yaml.injection_points` 声明的 5 个注入点叠加业务能力包：
+Overlay business capability packages at the 5 injection points declared in `manifest.yaml.injection_points`:
 
 ```bash
 voice-agent add knowledge-base

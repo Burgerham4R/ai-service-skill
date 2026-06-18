@@ -1,37 +1,37 @@
-# human-handoff · 转人工 + 排队状态同步
+# human-handoff · Handoff + Queue Status Sync
 
-> 在 conversation-core 之上提供"语义触发转人工 + 排队状态同步 + 座席接通"能力。
+> Provides semantic-triggered human handoff + queue status sync + agent connection capabilities on top of conversation-core.
 
-## 安装
+## Install
 
 ```bash
 python scripts/add-capability.py human-handoff
 ```
 
-## 配置
+## Configuration
 
-| 环境变量 | 默认 | 说明 |
+| Env Variable | Default | Description |
 |:---|:---|:---|
-| `HH_TRIGGERS`        | 见下文 | 强触发关键词，CSV |
-| `HH_INTENT_KEYWORDS` | 见下文 | 弱意图关键词，CSV |
-| `HH_QUEUE_CAPACITY`  | 50   | 排队容量 |
-| `HH_AGENT_POOL_SIZE` | 1    | 可用座席数 |
-| `HH_WAIT_PER_SLOT`   | 30   | 每槽位估算等待秒 |
+| `HH_TRIGGERS`        | See below | Strong trigger keywords, CSV |
+| `HH_INTENT_KEYWORDS` | See below | Weak intent keywords, CSV |
+| `HH_QUEUE_CAPACITY`  | 50   | Queue capacity |
+| `HH_AGENT_POOL_SIZE` | 1    | Available agent count |
+| `HH_WAIT_PER_SLOT`   | 30   | Estimated wait seconds per slot |
 
-默认强触发：`人工 / 转人工 / talk to agent / real person`
-默认弱触发：`投诉 / complain / manager / 无法解决`（需排除否定上下文）
+Default strong triggers: `talk to agent / real person / human support`
+Default weak triggers: `complain / manager / supervisor / not working` (negative context excluded)
 
 ## REST API
 
-| 方法 | 路径 | 用途 |
+| Method | Path | Purpose |
 |:---|:---|:---|
-| GET  | `/api/v1/handoff/status`         | 整体排队状态 |
-| GET  | `/api/v1/handoff/{session_id}`   | 单会话状态 |
-| POST | `/api/v1/handoff/request`        | 显式申请转人工 |
-| POST | `/api/v1/handoff/connect`        | 模拟接通 |
-| POST | `/api/v1/handoff/cancel`         | 取消申请 |
+| GET  | `/api/v1/handoff/status`         | Overall queue status |
+| GET  | `/api/v1/handoff/{session_id}`   | Single session status |
+| POST | `/api/v1/handoff/request`        | Explicit handoff request |
+| POST | `/api/v1/handoff/connect`        | Simulate agent connection |
+| POST | `/api/v1/handoff/cancel`         | Cancel request |
 
-## 状态机
+## State Machine
 
 ```
    idle ──request──▶ waiting ──connect──▶ connected
@@ -40,4 +40,5 @@ python scripts/add-capability.py human-handoff
                      cancel/timeout       cancel
 ```
 
-集成方应在自身座席系统中订阅 `/handoff/status` 或 `/handoff/{id}` 做同步推送。
+Integrators should subscribe to `/handoff/status` or `/handoff/{id}` in their agent system for sync push.
+

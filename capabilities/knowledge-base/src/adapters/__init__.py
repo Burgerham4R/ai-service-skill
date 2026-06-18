@@ -1,4 +1,4 @@
-"""knowledge-base adapter 实现。"""
+"""knowledge-base adapter implementations."""
 from .factory import build_default, get_client, reset_client, set_client
 
 __all__ = [

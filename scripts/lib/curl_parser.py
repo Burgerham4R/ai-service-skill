@@ -1,22 +1,22 @@
-"""curl 命令解析器（Phase 3 阶段 4）。
+"""curl command parser (Phase 3 Stage 4).
 
-把用户在对话中粘贴的 curl 命令解析为统一的 ``ParsedApi`` 数据结构，
-供 ``contract_resolver`` 与 ``adapter_codegen`` 消费。
+Parses curl commands pasted by users in the chat into unified ``ParsedApi`` data structures,
+consumed by ``contract_resolver`` and ``adapter_codegen``.
 
-支持：
-- 多行（行尾 ``\\``）/ 单行
+Supported:
+- Multi-line (trailing ``\\``) / single-line
 - ``-X / --request <METHOD>``
-- ``-H / --header 'k: v'``（重复出现时累积）
+- ``-H / --header 'k: v'`` (accumulates on repeated appearances)
 - ``-d / --data / --data-raw / --data-binary '<body>'``
-- ``--url <url>`` 或 URL 作为位置参数
-- 单引号 / 双引号字符串（含转义）
-- 自动识别 Authorization → ``bearer``；自定义 ``X-*-Token`` → ``api_key``
-- 自动识别 body 是否为 JSON，若是则按字段提取 ``request_schema``
+- ``--url <url>`` or URL as a positional argument
+- Single-quoted / double-quoted strings (including escapes)
+- Auto-detect Authorization → ``bearer``; custom ``X-*-Token`` → ``api_key``
+- Auto-detect if body is JSON and extract ``request_schema`` fields accordingly
 
-不支持（输出 protocol_mismatch=True 时，contract_resolver 会触发 L3 降级）：
-- multipart / form-data 上传
+Not supported (when protocol_mismatch=True, contract_resolver triggers L3 fallback):
+- multipart / form-data uploads
 - ``--cookie``
-- 非 JSON body（XML / GraphQL string body）
+- Non-JSON body (XML / GraphQL string body)
 """
 from __future__ import annotations
 

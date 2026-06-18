@@ -1,15 +1,15 @@
-"""tool-calling 能力包内置「通用 AI 客服工具集」（α 轨默认实现 = 本地 mock）。
+"""tool-calling built-in "Generic AI Customer Service Tool Set" (alpha-track default = local mock).
 
-设计原则（与 SKILL §6 点 2 对齐）：
-- 行业中立：不绑定具体行业，覆盖绝大多数客服场景的通用动作
-  （查单据状态 / 查营业信息 / 预约 / 提交反馈）。
-- 开箱即用：每个工具都有可直接运行的 α 轨 mock 实现，
-  用户走路径 A 或本地演示、即使没有真实后端接口，也能立刻看到能力效果。
-- 可平滑替换：每个工具在 data/tools.yaml 同时声明 β 轨（远程 HTTPS）占位；
-  用户接真实系统时只需把 β endpoint 指向自己的 API（或按 INTERFACE_ADAPT.md 适配）。
+Design principles (aligned with SKILL §6 point 2):
+- Industry-neutral: not tied to specific verticals; covers common actions across most customer service scenarios
+  (check document status / check business info / make appointment / submit feedback).
+- Works out of the box: each tool has a directly runnable alpha-track mock implementation;
+  users on Path A or local demos can see the capability in effect immediately, even without a real backend API.
+- Smoothly replaceable: each tool also declares a beta-track (remote HTTPS) placeholder in data/tools.yaml;
+  connecting to a real system only requires pointing the beta endpoint to your own API (or adapting per INTERFACE_ADAPT.md).
 
-返回值必须 JSON-serializable；mock 数据统一带 "_mock": true 标记，
-便于前端 / 日志区分「演示数据」与「真实业务数据」。
+Return value must be JSON-serializable; mock data uniformly carries "_mock": true marker,
+making it easy for frontend / logs to distinguish "demo data" from "real business data".
 """
 from __future__ import annotations
 
@@ -19,16 +19,16 @@ from typing import Any, Dict
 
 
 def _stable_pick(seed: str, choices):
-    """根据 seed 稳定地选一个值（同一输入每次返回一致，便于演示可复现）。"""
+    """Stably select a value based on seed (same input always returns the same result, making demos reproducible)."""
     h = int(hashlib.md5(seed.encode("utf-8")).hexdigest(), 16)
     return choices[h % len(choices)]
 
 
 def query_order_status(order_id: str = "", **_: Any) -> Dict[str, Any]:
-    """查询单据 / 订单 / 工单状态（通用客服动作）。
+    """Query document / order / ticket status (generic customer service action).
 
-    参数:
-        order_id: 单据号（订单号 / 工单号 / 预约号均可）。
+    Parameters:
+        order_id: Document number (order number / ticket number / appointment number fine).
     """
     if not order_id:
         return {"_mock": True, "error": "order_id is required"}
@@ -43,9 +43,9 @@ def query_order_status(order_id: str = "", **_: Any) -> Dict[str, Any]:
 
 
 def get_business_info(topic: str = "hours", **_: Any) -> Dict[str, Any]:
-    """查询营业信息（营业时间 / 地址 / 联系方式等），通用客服高频问题。
+    """Query business info (hours / address / contact etc.), common high-frequency customer service question.
 
-    参数:
+    Parameters:
         topic: hours | address | contact | all
     """
     info = {
@@ -60,12 +60,12 @@ def get_business_info(topic: str = "hours", **_: Any) -> Dict[str, Any]:
 
 
 def book_appointment(date: str = "", time_slot: str = "", party_size: int = 2, **_: Any) -> Dict[str, Any]:
-    """创建预约 / 预订（餐厅订位、服务预约、回电预约等通用动作）。
+    """Create reservation / booking (restaurant reservation, service appointment, callback booking etc. generic actions).
 
-    参数:
-        date: 日期，如 2026-06-12
-        time_slot: 时间段，如 18:30
-        party_size: 人数 / 数量
+    Parameters:
+        date: Date, e.g. 2026-06-12
+        time_slot: Time slot, e.g. 18:30
+        party_size: Party size / quantity
     """
     if not date or not time_slot:
         return {"_mock": True, "error": "date and time_slot are required"}
@@ -82,11 +82,11 @@ def book_appointment(date: str = "", time_slot: str = "", party_size: int = 2, *
 
 
 def submit_feedback(rating: int = 5, comment: str = "", **_: Any) -> Dict[str, Any]:
-    """提交满意度 / 反馈（会话尾部常见动作）。
+    """Submit satisfaction / feedback (common end-of-session action).
 
-    参数:
-        rating: 1-5 评分
-        comment: 文字反馈（可选）
+    Parameters:
+        rating: 1-5 rating
+        comment: Text feedback (optional)
     """
     try:
         rating = max(1, min(5, int(rating)))

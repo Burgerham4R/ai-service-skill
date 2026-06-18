@@ -1,18 +1,19 @@
-"""business_contract 字段解析与 diff 工具（Phase 3 阶段 4）。
+"""business_contract field parsing & diff utilities (Phase 3 Stage 4).
 
-职责：
-1. 加载能力包 ``manifest.yaml.business_contract`` 段并按 ``business-contract-spec.md``
-   §7 规则做静态校验（BC001~BC006）。
-2. 把 manifest 中声明的某条 ``external_apis[name]`` 转成 ``ParsedApi`` 形式（默认契约）。
-3. ``diff_contracts(default, user)`` 返回结构化差异并据此推断降级级别 L1 / L2 / L3。
+Responsibilities:
+1. Load a capability's ``manifest.yaml.business_contract`` block and perform static
+   validation (BC001~BC006) per ``business-contract-spec.md`` §7 rules.
+2. Convert a manifest-declared ``external_apis[name]`` entry into ``ParsedApi`` form (default contract).
+3. ``diff_contracts(default, user)`` returns structured differences and infers
+   fallback level L1 / L2 / L3.
 
-降级级别判定：
+Fallback Level Determination:
 
-| 级别 | 触发条件 |
+| Level | Trigger Condition |
 |---|---|
-| L1 | 仅在 ``adapter_slots`` 列表内字段差异（名称重映射 / 枚举值映射）          |
-| L2 | 解析成功但存在结构差异（嵌套层级不同、类型不同、required 字段缺失）         |
-| L3 | 协议级差异（method 严重不同、用户接口非 REST/JSON、body_format=raw 等）   |
+| L1 | Only field differences within the ``adapter_slots`` list (name remapping / enum value mapping) |
+| L2 | Parsed successfully but structural differences exist (nested level differences, type differences, missing required fields) |
+| L3 | Protocol-level differences (significant method mismatch, non-REST/JSON user API, body_format=raw, etc.) |
 """
 from __future__ import annotations
 
@@ -28,10 +29,10 @@ from .curl_parser import AuthSpec, ParsedApi, _normalize_schema
 
 
 # ---------------------------------------------------------------------------
-# 错误码 / 异常
+# Error codes / exceptions
 # ---------------------------------------------------------------------------
 class ContractError(RuntimeError):
-    """business_contract 字段错误。"""
+    """business_contract field error."""
 
     def __init__(self, code: str, message: str) -> None:
         super().__init__(f"[{code}] {message}")
@@ -45,7 +46,7 @@ class DegradeLevel(str, Enum):
 
 
 # ---------------------------------------------------------------------------
-# 数据模型
+# Data models
 # ---------------------------------------------------------------------------
 @dataclass
 class ExternalApi:
@@ -61,8 +62,8 @@ class ExternalApi:
     timeout_ms: int = 5000
 
     def to_parsed_api(self, base_url: str = "") -> ParsedApi:
-        # manifest.yaml 中字段值已是规范化字面量（"string" / "int" / "enum[...]" / "string[]"），
-        # 因此**不再**调用 _normalize_schema（避免把 "string[]" 二次降级为 "string"）
+        # manifest.yaml field values are already normalized literals ("string" / "int" / "enum[...]" / "string[]"),
+        # so do **not** call _normalize_schema (avoids degrading "string[]" to "string")
         return ParsedApi(
             method=self.method.upper(),
             base_url=base_url,
@@ -98,13 +99,13 @@ class BusinessContract:
 
 @dataclass
 class FieldDiff:
-    """单个字段差异。"""
+    """Single field diff."""
 
     path: str                 # request.subject / response.ticket_id
     kind: str                 # rename | type_mismatch | missing_in_user | extra_in_user | enum_mismatch
-    default: Any = None       # 默认契约的字段名 / 类型 / 枚举集
-    user: Any = None          # 用户实际的值
-    in_slot: bool = False     # 是否落在 adapter_slots（决定 L1 vs L2）
+    default: Any = None       # default contract field name / type / enum set
+    user: Any = None          # user's actual value
+    in_slot: bool = False     # whether within adapter_slots (determines L1 vs L2)
 
     def to_dict(self) -> Dict:
         return {
@@ -146,25 +147,25 @@ class ContractDiff:
 
 
 # ---------------------------------------------------------------------------
-# manifest 加载与校验
+# Manifest loading & validation
 # ---------------------------------------------------------------------------
 def _import_dotted(path: str) -> bool:
-    """尝试 import 一个点号路径；仅做语法 / 模块文件存在性校验，不实例化。"""
+    """Attempt to import a dotted path; only validates syntax / module file existence, no instantiation."""
     if not path:
         return False
-    # 仅校验形式：a.b.c.ClassName
+    # Only validate form: a.b.c.ClassName
     if not re.match(r"^[A-Za-z_][\w\.]*$", path):
         return False
     return True
 
 
 def load_business_contract(capability_dir: Path) -> BusinessContract:
-    """加载能力包 manifest.yaml 并解析其 business_contract 段。
+    """Load a capability manifest.yaml and parse its business_contract block.
 
     Raises
     ------
     ContractError
-        manifest 不存在 / business_contract 缺失 / 字段非法。
+        manifest missing / business_contract missing / invalid fields.
     """
     manifest_path = Path(capability_dir) / "manifest.yaml"
     if not manifest_path.exists():
@@ -175,7 +176,7 @@ def load_business_contract(capability_dir: Path) -> BusinessContract:
     if not isinstance(bc_raw, dict):
         raise ContractError("BC000", f"{cap_name}: missing business_contract block")
 
-    # tool-calling 走 §5 专属契约段，本工具暂不处理
+    # tool-calling uses §5 dedicated contract block; not yet supported by this tool
     if "alpha_track" in bc_raw or "beta_track" in bc_raw:
         raise ContractError(
             "BC000",
@@ -187,7 +188,7 @@ def load_business_contract(capability_dir: Path) -> BusinessContract:
     mock_adapter = str(bc_raw.get("mock_adapter", ""))
     sop = str(bc_raw.get("customization_sop", "INTERFACE_ADAPT.md"))
 
-    # BC001：三个 dotted path 必须是合法形式
+    # BC001: all three dotted paths must be valid
     for label, p in (("port_class", port_class), ("default_adapter", default_adapter), ("mock_adapter", mock_adapter)):
         if not _import_dotted(p):
             raise ContractError("BC001", f"{cap_name}: invalid {label}={p!r}")
@@ -200,7 +201,7 @@ def load_business_contract(capability_dir: Path) -> BusinessContract:
         name = str(entry.get("name", "")).strip()
         if not name:
             raise ContractError("BC003", f"{cap_name}: external_api missing 'name'")
-        # BC002：名字重复
+        # BC002: duplicate name
         if name in seen_names:
             raise ContractError("BC002", f"{cap_name}: duplicate external_api name {name!r}")
         seen_names.add(name)
@@ -230,8 +231,8 @@ def load_business_contract(capability_dir: Path) -> BusinessContract:
             timeout_ms=int(entry.get("timeout_ms", 5000)),
         )
 
-        # BC004：adapter_slots 应在 schema 中可解析（仅 warning，不抛错）
-        # 此处简化：仅检查顶层字段
+        # BC004: adapter_slots should be resolvable in schema (warning only, no exception)
+        # Simplified: only checks top-level fields
         for slot in api.adapter_slots:
             if not (slot.startswith("request.") or slot.startswith("response.")):
                 # 视为 warning，无副作用
@@ -251,10 +252,10 @@ def load_business_contract(capability_dir: Path) -> BusinessContract:
 
 
 # ---------------------------------------------------------------------------
-# 默认契约 vs 用户契约的 diff
+# Default contract vs user contract diff
 # ---------------------------------------------------------------------------
 def _walk_schema(schema: Any, prefix: str = "") -> Dict[str, Any]:
-    """把任意嵌套类型描述展平为 ``{ 'a.b.c': type_string }``。"""
+    """Flatten arbitrary nested type descriptions to ``{ 'a.b.c': type_string }``."""
     out: Dict[str, Any] = {}
     if isinstance(schema, dict):
         for k, v in schema.items():
@@ -263,8 +264,8 @@ def _walk_schema(schema: Any, prefix: str = "") -> Dict[str, Any]:
                 out.update(_walk_schema(v, sub))
             else:
                 out[sub] = v
-    elif isinstance(schema, list):
-        # 数组：取首元素递归
+    el    if isinstance(schema, list):
+        # Array: recurse into first element
         if schema:
             out.update(_walk_schema(schema[0], f"{prefix}[]"))
     else:
@@ -273,7 +274,7 @@ def _walk_schema(schema: Any, prefix: str = "") -> Dict[str, Any]:
 
 
 def _slot_match(field_path: str, slots: List[str]) -> bool:
-    """``request.priority`` ∈ slots（精确匹配，不支持通配）。"""
+    """``request.priority`` ∈ slots (exact match, no wildcards)."""
     return field_path in set(slots)
 
 
@@ -282,21 +283,22 @@ def _detect_protocol_mismatch(default: ExternalApi, user: ParsedApi) -> Tuple[bo
         return (True, f"method mismatch: default={default.method}, user={user.method}")
     if user.body_format == "raw":
         return (True, "user body is non-JSON raw payload")
-    # path 不一致不算 protocol 级差异（adapter 可重写 path），但记录
+    # Path mismatch is not a protocol-level diff (adapter can override path), but record it
     return (False, "")
 
 
 def diff_contracts(default: ExternalApi, user: ParsedApi) -> ContractDiff:
-    """对比默认契约与用户接口，产出结构化差异。
+    """Compare default contract with user API; produce structured differences.
 
     Notes
     -----
-    - request 字段对比：以默认 schema 为基准，看用户 schema 是否提供同名字段；
-      若不同名但用户多出某些字段，记为 ``rename`` 候选（仅在默认字段缺失时配对）。
-    - response 字段同理；如果用户没贴响应（response_schema 为空），仅生成 ``missing_in_user``
-      但不计入 protocol 失配。
-    - 类型差异（``string`` vs ``int``）记 ``type_mismatch``。
-    - Enum 差异不在 curl 中可见，仅 OpenAPI 输入时可见，记 ``enum_mismatch``。
+    - Request field comparison: uses default schema as baseline, checks whether user schema
+      provides same-named fields; if not same-named but user has extra fields, record as
+      ``rename`` candidate (paired only when default field is missing).
+    - Response fields same logic; if user did not provide response (response_schema is empty),
+      only generate ``missing_in_user`` but do not count as protocol mismatch.
+    - Type differences (``string`` vs ``int``) recorded as ``type_mismatch``.
+    - Enum differences not visible in curl input, only OpenAPI input; recorded as ``enum_mismatch``.
     """
     diff = ContractDiff(
         api_name=default.name,
@@ -315,11 +317,11 @@ def diff_contracts(default: ExternalApi, user: ParsedApi) -> ContractDiff:
 
     suggested: Dict[str, Any] = {"request": {}, "response": {}, "enum_map": {}}
 
-    # request 对比
+    # Request comparison
     diff.fields.extend(
         _diff_section(default_req, user_req, default.adapter_slots, "request", suggested["request"])
     )
-    # response 对比（如果用户有）
+    # Response comparison (if user provided one)
     if user_resp:
         diff.fields.extend(
             _diff_section(default_resp, user_resp, default.adapter_slots, "response", suggested["response"])
@@ -410,22 +412,22 @@ def _diff_section(
 
 
 # ---------------------------------------------------------------------------
-# 类型兼容性 / rename 候选
+# Type compatibility / rename candidates
 # ---------------------------------------------------------------------------
 def _types_compatible(a: Any, b: Any) -> bool:
     if a == b:
         return True
     a_s = str(a)
     b_s = str(b)
-    # enum[...] 与 string 视作兼容（adapter 层做枚举映射）
+    # enum[...] and string are treated as compatible (adapter layer handles enum mapping)
     if a_s.startswith("enum[") and b_s == "string":
         return True
     if b_s.startswith("enum[") and a_s == "string":
         return True
-    # int / float 互认
+    # int / float mutually compatible
     if {a_s, b_s} <= {"int", "float", "number"}:
         return True
-    # array 数据类型不一致 → 不兼容
+    # array type mismatch → incompatible
     return False
 
 
@@ -436,12 +438,12 @@ def _find_rename_candidate(
     user_flat: Dict[str, Any],
     used: set,
 ) -> Optional[str]:
-    """尝试在 extra user keys 中找一个类型相同 + 路径段语义近似的候选。"""
+    """Try to find a type-compatible + semantically similar path-segment candidate among extra user keys."""
     default_seg = default_path.split(".")[-1]
     candidates = [k for k in extra_user_keys if k not in used and _types_compatible(default_type, user_flat[k])]
     if not candidates:
         return None
-    # 简易语义近似：包含 / 被包含 / 同类语义近义词
+    # Simple semantic similarity: contains / contained-by / same-category synonyms
     synonyms = {
         "user_id": ["customer_id", "uid", "user", "client_id"],
         "subject": ["title", "summary", "topic"],
@@ -467,21 +469,21 @@ def _find_rename_candidate(
             return cand
         if cand_seg in syn_for_default or default_seg in synonyms.get(cand_seg, []):
             return cand
-    # 类型相同时，回退到第一个候选（best effort）
+    # Fallback to first candidate when types match (best effort)
     return candidates[0]
 
 
 # ---------------------------------------------------------------------------
-# 降级级别决策
+# Fallback level decision
 # ---------------------------------------------------------------------------
 def decide_level(diff: ContractDiff) -> DegradeLevel:
-    """L1 / L2 / L3 判定。"""
+    """L1 / L2 / L3 determination."""
     if diff.protocol_mismatch:
         return DegradeLevel.L3
-    # 任一不在 slot 内的差异 → L2
+    # Any non-slot diff → L2
     for f in diff.fields:
         if f.kind in ("user_response_missing",):
-            # 用户没贴响应不算 L2/L3 障碍（codegen 会用默认契约的字段名）
+            # Missing user response is not an L2/L3 obstacle (codegen uses default contract field names)
             continue
         if f.kind == "extra_in_user":
             continue
@@ -493,12 +495,12 @@ def decide_level(diff: ContractDiff) -> DegradeLevel:
 
 
 # ---------------------------------------------------------------------------
-# 静态校验入口（对应 spec §7）
+# Static validation entry point (per spec §7)
 # ---------------------------------------------------------------------------
 def validate_manifest(capability_dir: Path) -> List[str]:
-    """对一个能力包的 manifest.business_contract 做完整静态校验。
+    """Perform full static validation on a capability's manifest.business_contract.
 
-    返回 warning 字符串列表；若有 BC001~BC003/BC005 这些 fatal 错误会直接抛 ContractError。
+    Returns a list of warning strings; fatal errors (BC001~BC003/BC005) raise ContractError directly.
     """
     bc = load_business_contract(capability_dir)
     warnings: List[str] = []

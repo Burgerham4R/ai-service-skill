@@ -1,6 +1,6 @@
-"""LocalJsonKbClient —— 默认本地实现。
+"""LocalJsonKbClient — default local implementation.
 
-零外部依赖，从 JSON 文件读取 FAQ + TF-IDF 评分。是从原 retriever.py 实现迁入的"默认开箱即用"版本。
+Zero external dependencies. Reads FAQ from JSON file + TF-IDF scoring. Migrated from the original retriever.py implementation as the "default out-of-the-box" version.
 """
 from __future__ import annotations
 
@@ -17,7 +17,7 @@ from ..ports.kb_client import KnowledgeBaseClient
 
 
 class LocalJsonKbClient(KnowledgeBaseClient):
-    """基于本地 JSON 文件的 FAQ 检索器。"""
+    """FAQ retriever based on local JSON file."""
 
     def __init__(
         self,
@@ -39,7 +39,7 @@ class LocalJsonKbClient(KnowledgeBaseClient):
             self.reload()
 
     # ------------------------------------------------------------------
-    # KnowledgeBaseClient 必须实现
+    # KnowledgeBaseClient required implementations
     # ------------------------------------------------------------------
     def search(
         self,
@@ -138,7 +138,7 @@ class LocalJsonKbClient(KnowledgeBaseClient):
         return self._top_k
 
     # ------------------------------------------------------------------
-    # 内部
+    # Internal
     # ------------------------------------------------------------------
     def _rebuild_df(self) -> None:
         self._df = build_df(self._entries)
@@ -146,7 +146,7 @@ class LocalJsonKbClient(KnowledgeBaseClient):
     def _persist(self) -> None:
         if not self._data_file:
             return
-        # 确保目录存在
+        # Ensure directory exists
         self._data_file.parent.mkdir(parents=True, exist_ok=True)
         tmp = self._data_file.with_suffix(self._data_file.suffix + ".tmp")
         tmp.write_text(
@@ -161,7 +161,7 @@ class LocalJsonKbClient(KnowledgeBaseClient):
 
 
 # ---------------------------------------------------------------------------
-# 工厂
+# Factory
 # ---------------------------------------------------------------------------
 def from_env() -> LocalJsonKbClient:
     default_file = Path(__file__).resolve().parent.parent.parent / "data" / "faq.json"

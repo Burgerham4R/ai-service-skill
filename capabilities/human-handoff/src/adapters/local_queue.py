@@ -1,16 +1,16 @@
-"""LocalQueueHandoffClient —— 默认本地实现。
+"""LocalQueueHandoffClient — default local implementation.
 
-零外部依赖，进程内排队 + 座席分配。是从原 queue.py 实现迁入的"默认开箱即用"版本。
+Zero external dependencies, in-process queuing + agent allocation. Migrated from the original queue.py implementation as the "default out-of-the-box" version.
 
-实现说明：
-- user_id 同时作为 ticket_id（保持与旧 session_id 行为一致）
-- 状态机：
+Implementation notes:
+- user_id also serves as ticket_id (keeping behavior consistent with old session_id)
+- State machine:
     PENDING ──connect──▶ PROCESSING
        │  ▲                  │
        │  │                  ▼
      cancel/timeout       cancel/close
-- 单进程 RLock 保护；跨进程同步由集成方上层（如 Redis）负责
-- 容量与座席数从环境变量读取，可通过构造函数覆盖
+- Single-process RLock protection; cross-process sync handled by integrator upper layer (e.g. Redis)
+- Capacity and agent count read from environment variables; can be overridden via constructor
 """
 from __future__ import annotations
 
@@ -29,7 +29,7 @@ from ..ports.handoff_client import HandoffClient
 
 
 class LocalQueueHandoffClient(HandoffClient):
-    """进程内内存排队的 HandoffClient 实现。"""
+    """In-process in-memory queuing HandoffClient implementation."""
 
     def __init__(
         self,
@@ -40,14 +40,14 @@ class LocalQueueHandoffClient(HandoffClient):
     ) -> None:
         self._lock = threading.RLock()
         self._tickets: Dict[str, Ticket] = {}     # ticket_id -> Ticket
-        self._waiting: List[str] = []             # ticket_id 列表，FIFO
+        self._waiting: List[str] = []             # ticket_id list, FIFO
         self._connected: Dict[str, str] = {}      # ticket_id -> agent_id
         self._capacity = int(capacity)
         self._pool = int(agent_pool_size)
         self._wait_per_slot = max(1, int(estimated_wait_per_slot))
 
     # ------------------------------------------------------------------
-    # HandoffClient 必须实现的方法
+    # HandoffClient required implementations
     # ------------------------------------------------------------------
     def create_ticket(
         self,
@@ -61,7 +61,7 @@ class LocalQueueHandoffClient(HandoffClient):
         if not user_id:
             raise ValueError("user_id is required")
         with self._lock:
-            # 一个 user 进行中的工单只允许一条；存在则刷新位置后返回
+            # Only one in-progress ticket per user; if exists, refresh position and return
             existing = self._find_active_by_user(user_id)
             if existing is not None:
                 if existing.status == TicketStatusEnum.PROCESSING.value:
@@ -69,7 +69,7 @@ class LocalQueueHandoffClient(HandoffClient):
                 self._refresh_position(existing)
                 return existing
 
-            ticket_id = user_id  # 兼容旧行为：session_id 即 ticket_id
+            ticket_id = user_id  # Compatible with old behavior: session_id is ticket_id
             t = Ticket(
                 ticket_id=ticket_id,
                 user_id=user_id,
@@ -82,7 +82,7 @@ class LocalQueueHandoffClient(HandoffClient):
                 updated_at=now_ts(),
             )
 
-            # 容量已满且无空座席：记 TIMEOUT
+            # Queue full and no available agents: mark TIMEOUT
             if (
                 len(self._waiting) >= self._capacity
                 and self._available_agents() == 0
@@ -96,7 +96,7 @@ class LocalQueueHandoffClient(HandoffClient):
             self._tickets[ticket_id] = t
             self._waiting.append(ticket_id)
 
-            # 若有空座席自动接通
+            # Auto-connect if an agent is available
             if self._available_agents() > 0:
                 self._auto_connect()
             self._refresh_position(t)
@@ -135,7 +135,7 @@ class LocalQueueHandoffClient(HandoffClient):
             )
 
     # ------------------------------------------------------------------
-    # 看板辅助方法
+    # Dashboard helper methods
     # ------------------------------------------------------------------
     def list_tickets(
         self,
@@ -177,7 +177,7 @@ class LocalQueueHandoffClient(HandoffClient):
             if new_status == TicketStatusEnum.PROCESSING.value:
                 if old_status != TicketStatusEnum.PROCESSING.value:
                     if self._available_agents() <= 0 and ticket_id not in self._connected:
-                        # 强制接通（手动操作）：座席池外开新槽
+                        # Force connect (manual): open new slot outside agent pool
                         pass
                     t.agent_id = agent_id or t.agent_id or f"agent_{ticket_id[-4:]}"
                     self._connected[ticket_id] = t.agent_id
@@ -205,7 +205,7 @@ class LocalQueueHandoffClient(HandoffClient):
             return self._find_active_by_user(user_id)
 
     # ------------------------------------------------------------------
-    # 内部
+    # Internal
     # ------------------------------------------------------------------
     def _available_agents(self) -> int:
         return max(0, self._pool - len(self._connected))
@@ -248,7 +248,7 @@ class LocalQueueHandoffClient(HandoffClient):
 
 
 # ---------------------------------------------------------------------------
-# 工厂：根据环境变量构造默认参数
+# Factory: build default parameters from environment variables
 # ---------------------------------------------------------------------------
 def from_env() -> LocalQueueHandoffClient:
     return LocalQueueHandoffClient(

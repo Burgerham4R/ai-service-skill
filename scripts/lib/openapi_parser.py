@@ -1,12 +1,12 @@
-"""OpenAPI（Swagger 2 / OpenAPI 3）→ ``ParsedApi`` 解析器。
+"""OpenAPI (Swagger 2 / OpenAPI 3) → ``ParsedApi`` parser.
 
-仅做能力包接口适配场景需要的最小子集：
+Only implements the minimal subset needed for capability contract adaptation:
 - ``info.servers[0].url`` → ``base_url``
-- ``paths.<path>.<method>`` → 一组 ``ParsedApi``
-- 引用 ``$ref`` 时按 ``components.schemas`` / ``definitions`` 解析为 type map
-- 不实现 OpenAPI 校验（不依赖 jsonschema 等重库）
+- ``paths.<path>.<method>`` → a set of ``ParsedApi``
+- ``$ref`` references resolved via ``components.schemas`` / ``definitions`` into type maps
+- No OpenAPI validation (no heavy dependencies like jsonschema)
 
-支持文件格式：``.yaml`` / ``.yml`` / ``.json``。
+Supported file formats: ``.yaml`` / ``.yml`` / ``.json``.
 """
 from __future__ import annotations
 

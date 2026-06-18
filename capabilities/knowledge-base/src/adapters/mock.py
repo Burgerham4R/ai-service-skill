@@ -1,10 +1,10 @@
-"""MockKbClient —— Recipe 录视频用的 mock 实现。
+"""MockKbClient — mock implementation for Recipe demo recording.
 
-继承 LocalJsonKbClient；构造时把内嵌示例 FAQ 灌入内存（不依赖磁盘文件）。
+Inherits LocalJsonKbClient; seeds embedded demo FAQ into memory on construction (no disk file dependency).
 
-适用场景：
-- 用户首次启动 Recipe，data/faq.json 还未填值时也能开箱有效果
-- 录视频演示时数据稳定，不会因外部文件被改而失效
+Applicable scenarios:
+- User's first Recipe launch works out of the box even before data/faq.json has been filled in
+- Stable data for video demos, won't break due to external file changes
 """
 from __future__ import annotations
 
@@ -55,18 +55,18 @@ _DEMO_FAQ: List[dict] = [
 
 
 class MockKbClient(LocalJsonKbClient):
-    """演示用 mock 实现。"""
+    """Mock implementation for demos."""
 
     is_mock = True
 
     def __init__(
         self,
         *,
-        min_score: float = 0.05,    # 演示用更宽松的阈值
+        min_score: float = 0.05,    # More lenient threshold for demos
         top_k: int = 3,
         seed_demo_data: bool = True,
     ) -> None:
-        # 不指定 data_file —— 数据完全内存驻留
+        # No data_file specified — data is entirely memory-resident
         super().__init__(
             data_file=None,
             min_score=min_score,

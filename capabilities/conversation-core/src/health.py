@@ -1,6 +1,6 @@
-"""三把 Key 实时连通性自检。
+"""Real-time connectivity self-check for the 3 keys.
 
-每把 Key 输入后立即校验，失败即时反馈，不进入下一把。
+Each key is validated immediately after input; failures get instant feedback without proceeding to the next key.
 """
 from __future__ import annotations
 
@@ -37,7 +37,7 @@ class CheckResult:
 
 
 # ---------------------------------------------------------------------------
-# 1) 腾讯云 API 密钥：调用 STS GetFederationToken
+# 1) Tencent Cloud API Key: Call STS GetFederationToken
 # ---------------------------------------------------------------------------
 _STS_HOST = "sts.tencentcloudapi.com"
 _STS_SERVICE = "sts"
@@ -53,7 +53,7 @@ def _sign_tc3(secret_key: str, date: str, service: str, string_to_sign: str) -> 
 
 
 def check_tencent_cloud(cred: TencentCloudCredential, timeout: float = 5.0) -> CheckResult:
-    """调用 STS GetFederationToken，确认 SecretId/SecretKey 有效。"""
+    """Call STS GetFederationToken to verify SecretId/SecretKey validity."""
     if not cred.configured:
         return CheckResult(ok=False, latency_ms=0, error_code="E001", detail="empty credential")
 
@@ -141,12 +141,13 @@ def check_tencent_cloud(cred: TencentCloudCredential, timeout: float = 5.0) -> C
 
 
 # ---------------------------------------------------------------------------
-# 2) TRTC 应用凭据：调用 TRTC OpenAPI DescribeAppStatistics 验证 SDKAppID +
-#    腾讯云 API 密钥的真实可用性。
-#    备注：StartAIConversation 期间发现 TRTC 服务端会同时校验 SDKSecretKey
-#    与房间号匹配性，仅靠本地 UserSig 生成无法发现 SecretKey 配错的情况，
-#    因此这里做一次轻量级的真实 OpenAPI 调用兜底（限频 50/s 不会触发限流）。
-#    endpoint 按 trtc.region 切换：intl → trtc.intl.tencentcloudapi.com
+# 2) TRTC Application Credentials: Call TRTC OpenAPI DescribeAppStatistics to verify
+#    that SDKAppID + Tencent Cloud API Key combination actually works.
+#    Note: During StartAIConversation, TRTC server also validates SDKSecretKey
+#    against the room ID, so local UserSig generation alone cannot detect SecretKey
+#    misconfiguration. Hence we do a lightweight real OpenAPI call as a fallback
+#    (rate limit 50/s won't trigger throttling).
+#    endpoint switches by trtc.region: intl → trtc.intl.tencentcloudapi.com
 # ---------------------------------------------------------------------------
 _TRTC_SERVICE = "trtc"
 _TRTC_VERSION = "2019-07-22"
@@ -168,18 +169,18 @@ def check_trtc(
     tencent: TencentCloudCredential | None = None,
     timeout: float = 5.0,
 ) -> CheckResult:
-    """验证 TRTC 凭据。
+    """Verify TRTC credentials.
 
-    1. 必检：本地 UserSig 生成（验证 SDKAppID + SDKSecretKey 自洽）
-    2. 推荐：调用 TRTC OpenAPI ``DescribeTRTCRealTimeQualityData``
-       验证 SDKAppID 在腾讯云账号下真实存在（依赖 ``tencent`` 凭据）
-       endpoint 按 cred.region 切换（intl / cn）
+    1. Required: Local UserSig generation (verify SDKAppID + SDKSecretKey self-consistency)
+    2. Recommended: Call TRTC OpenAPI ``DescribeTRTCRealTimeQualityData``
+       to verify SDKAppID really exists under the Tencent Cloud account (depends on ``tencent`` cred)
+       endpoint switches by cred.region (intl / cn)
     """
     if not cred.configured:
         return CheckResult(ok=False, latency_ms=0, error_code="E002", detail="empty credential")
 
     started = time.perf_counter()
-    # —— Step 1: 本地 UserSig 生成 ——
+    # —— Step 1: Local UserSig generation ——
     try:
         sig = gen_user_sig(
             sdk_app_id=cred.sdk_app_id,
@@ -197,7 +198,7 @@ def check_trtc(
             detail="invalid usersig length",
         )
 
-    # —— Step 2: 真实 OpenAPI 校验（需腾讯云 API 凭据） ——
+    # —— Step 2: Real OpenAPI verification (requires Tencent Cloud API credentials) ——
     if tencent is None or not tencent.configured:
         elapsed = int((time.perf_counter() - started) * 1000)
         return CheckResult(ok=True, latency_ms=elapsed, detail="local-only (no tencent cred)")
@@ -205,7 +206,7 @@ def check_trtc(
     trtc_host = cred.trtc_endpoint
     trtc_region = cred.trtc_region
 
-    # 用 DescribeTRTCRealTimeQualityData 做最小化探测：传 SdkAppId + 极短时间窗
+    # Use DescribeTRTCRealTimeQualityData for a minimal probe: pass SdkAppId + very short time window
     now_ts = int(time.time())
     payload = json.dumps(
         {
@@ -262,7 +263,7 @@ def check_trtc(
                 latency_ms=elapsed,
                 detail=f"region={cred.region}, endpoint={trtc_host}",
             )
-        # 区分两类错误：SdkAppId 不属于本账号 vs 其他
+        # Distinguish two error types: SdkAppId not under this account vs others
         if err:
             code = err.get("Code", "")
             if "SdkAppId" in code or "AuthFailure" in code or "ResourceNotFound" in code:
@@ -272,7 +273,7 @@ def check_trtc(
                     error_code="E002",
                     detail=f"{code}: {err.get('Message', '')} (region={cred.region})",
                 )
-            # 其他业务错误（如未开通某子能力）不影响 SdkAppId 归属判定，视为通过
+            # Other business errors (e.g. a sub-capability not enabled) don't affect SdkAppId ownership; treat as pass
             return CheckResult(
                 ok=True,
                 latency_ms=elapsed,
@@ -296,7 +297,7 @@ def check_trtc(
 
 
 # ---------------------------------------------------------------------------
-# 3) 外部 LLM：发送最小化 Prompt，确认密钥有效。
+# 3) External LLM: Send a minimal prompt to verify the key is valid.
 # ---------------------------------------------------------------------------
 def check_llm(cred: LlmCredential, timeout: float = 10.0) -> CheckResult:
     if not cred.configured:

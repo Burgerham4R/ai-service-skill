@@ -1,4 +1,4 @@
-"""技术栈识别 + 三级降级 测试。"""
+"""Tech stack detection + three-tier fallback tests."""
 import json
 import os
 import sys

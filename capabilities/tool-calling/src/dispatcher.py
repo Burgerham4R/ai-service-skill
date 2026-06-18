@@ -1,13 +1,13 @@
-"""文本注入拦截：从对话流中识别 "/tool" 调用。
+"""Text injection interceptor: recognize "/tool" invocations from the conversation stream.
 
-约定文本格式：
+Expected text format:
     /tool <name> {json_params}
 
-示例：
+Example:
     /tool get_order {"order_id": "A1234"}
 
-Dispatcher 解析后调用 ToolRegistry，将结果以结构化字符串返回，
-由 conversation-core 的注入点继续推送给 LLM。
+Dispatcher parses and calls ToolRegistry, returning the result as a structured string,
+which is then forwarded to the LLM by conversation-core's injection point.
 """
 from __future__ import annotations
 
@@ -22,7 +22,7 @@ _MAX_TEXT_LEN = 4096
 
 
 def maybe_dispatch(text: str) -> Optional[str]:
-    """识别 "/tool" 触发，返回带工具结果的新文本；无触发返回 None。"""
+    """Recognize "/tool" trigger, return new text with tool result; return None when not triggered."""
     if not text or len(text) > _MAX_TEXT_LEN:
         return None
     m = _TOOL_RE.match(text)
@@ -46,7 +46,7 @@ def maybe_dispatch(text: str) -> Optional[str]:
         "latency_ms": result.latency_ms,
         "fallback_chain": result.fallback_chain,
     }
-    # 用约定块返回，便于 LLM 系统提示识别工具结果
+    # Return in convention block, making it easy for LLM system prompt to recognize tool results
     return (
         f"[tool_result name={result.tool} track={result.track} ok={result.ok}]\n"
         + json.dumps(payload, ensure_ascii=False)

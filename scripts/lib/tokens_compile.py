@@ -1,12 +1,12 @@
-"""tokens_compile —— 把 design_tokens.json 编译成 CSS 变量文件。
+"""tokens_compile —— compile design_tokens.json into CSS variable files.
 
-设计目标：
-- 单一事实源：design_tokens.json
-- 编译产物：scenarios/**/ui/**/tokens.css（DESIGN_GUIDELINES §9 已声明禁止手改）
-- 命名对照 DESIGN_GUIDELINES.md §2.1 的 CSS 变量名（精简版而非全量 flatten）
-- 不引入第三方依赖（不依赖 style-dictionary 等）
+Design goals:
+- Single source of truth: design_tokens.json
+- Compiled output: scenarios/**/ui/**/tokens.css (DESIGN_GUIDELINES §9 declares these must not be hand-edited)
+- Naming aligns with DESIGN_GUIDELINES.md §2.1 CSS variable names (compact, not full flatten)
+- No third-party dependencies (no style-dictionary, etc.)
 
-调用方式：
+Invocation:
     python3 -m scripts.lib.tokens_compile \\
         --src design_tokens.json \\
         --dest scenarios/customer-service/ui/widget-floating/tokens.css \\
@@ -23,9 +23,9 @@ from typing import Any, Dict, List, Tuple
 
 _HEADER = (
     "/*\n"
-    " * 自动生成自 design_tokens.json —— **禁止手改**\n"
-    " * 编译命令：python3 -m scripts.lib.tokens_compile\n"
-    " * 命名规范见 scenarios/customer-service/ui/design-system/DESIGN_GUIDELINES.md §2.1\n"
+    " * Auto-generated from design_tokens.json —— **DO NOT EDIT**\n"
+    " * Build command: python3 -m scripts.lib.tokens_compile\n"
+    " * Naming convention: see scenarios/customer-service/ui/design-system/DESIGN_GUIDELINES.md §2.1\n"
     " */\n"
 )
 
@@ -151,7 +151,7 @@ def compile_tokens(src: Path) -> str:
 
     if missing:
         raise SystemExit(
-            "design_tokens.json 缺少以下 token，请补齐后重跑：\n  - "
+            "design_tokens.json is missing the following tokens. Please add them and re-run:\n  - "
             + "\n  - ".join(missing)
         )
 

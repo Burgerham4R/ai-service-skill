@@ -1,27 +1,28 @@
-# session-summary 能力包自描述清单
-# 类型: capability（可选安装）
+# session-summary capability self-describing manifest
+# Type: capability (optional install)
 
 name: "session-summary"
 version: "1.0.0"
 type: "capability"
-description: "会话自动纪要 + 结构化摘要输出（轮次记录 / 关键事实抽取 / LLM 二次总结）"
+description: "Automatic session summarization + structured summary output (turn recording / key fact extraction / LLM secondary summarization)"
 
 dependencies:
   - name: "conversation-core"
     version: ">=1.0.0,<2.0.0"
 
-# 可选联动（软依赖，非硬性 dependency）：
-# 当同时安装 human-handoff 时，转人工建单会自动触发本能力对该 session 生成纪要并挂到工单，
-# 坐席在看板工单详情里即可直接看到客户问题上下文（无需手动点"生成纪要"）。
-# 联动由 human-handoff 侧 best-effort 调用实现（capabilities/human-handoff/src/summary_link.py）；
-# 本能力未安装时该调用静默跳过，不影响转人工主流程。
+# Optional integration (soft dependency, not hard dependency):
+# When human-handoff is also installed, ticket creation will auto-trigger this capability
+# to generate a summary for that session and attach it to the ticket. Agents can see the
+# customer issue context directly in the dashboard ticket details (no need to manually click "generate summary").
+# The integration is implemented as a best-effort call from human-handoff (capabilities/human-handoff/src/summary_link.py);
+# when this capability is not installed, the call silently skips without affecting the handoff main flow.
 optional_integrations:
   - capability: "human-handoff"
     trigger: "ticket.create"
     behavior: "auto-finalize session summary (heuristic) and embed into ticket payload"
 
 extensions:
-  # 文本注入前归档为一条 user 轮次
+  # Archive as a user turn before text injection
   - inject_at: "agent.before_push_text"
     inline_code: |
       # [session-summary] record user turn
@@ -48,24 +49,24 @@ extensions:
 
 config:
   adapter:
-    description: "纪要写回目标：mock（默认，无外部依赖）| local_json | default_rest"
+    description: "Summary write-back target: mock (default, no external deps) | local_json | default_rest"
     default: "mock"
     env: "SS_ADAPTER"
     options:
-      mock: "只打日志 + 返回 mock record_id，便于本地 / 路径 A 演示"
-      local_json: "追加写本地 JSONL（data/_writeback.jsonl）"
-      default_rest: "POST 到真实 CRM / 工单系统（需 SS_REST_BASE_URL[/SS_REST_TOKEN]）"
+      mock: "Log-only + returns mock record_id, suitable for local / Path A demos"
+      local_json: "Append to local JSONL (data/_writeback.jsonl)"
+      default_rest: "POST to real CRM / ticketing system (requires SS_REST_BASE_URL[/SS_REST_TOKEN])"
   storage_dir:
-    description: "纪要文件落盘目录（每个 session 一个 JSON）"
+    description: "Summary file landing directory (one JSON per session)"
     default: "capabilities/session-summary/data/"
   llm_summary:
-    description: "是否启用 LLM 二次总结（占用 LLM_API_KEY；离线场景置 false）"
+    description: "Whether to enable LLM secondary summarization (consumes LLM_API_KEY; set false for offline scenarios)"
     default: true
   retention_days:
-    description: "纪要保留天数；过期自动清理"
+    description: "Summary retention days; auto-cleanup after expiry"
     default: 30
   redact_patterns:
-    description: "纪要落盘前自动脱敏的字段（与骨架 log_redaction 同标准）"
+    description: "Fields to auto-redact before writing summaries (same standard as skeleton log_redaction)"
     default:
       - "secret_id"
       - "secret_key"
@@ -75,13 +76,13 @@ config:
 endpoints:
   - method: GET
     path: /api/v1/summary/{session_id}
-    description: 获取单 session 纪要（含轮次清单与结构化摘要）
+    description: Get single session summary (includes turn list and structured summary)
   - method: POST
     path: /api/v1/summary/{session_id}/finalize
-    description: 关闭会话并触发 LLM 二次总结
+    description: Close session and trigger LLM secondary summarization
   - method: GET
     path: /api/v1/summary/_list
-    description: 列出最近 N 条纪要（_offset / _limit query）
+    description: List most recent N summaries (_offset / _limit query)
 
 integration:
   mode: "auto"
@@ -92,7 +93,7 @@ integration:
       adapter: "python-backend"
     - tech_stack: ["react", "vue", "angular"]
       adapter: "frontend-spa"
-      description: "在 SPA 中追加纪要查看面板"
+      description: "Append summary viewer panel to SPA"
   fallback:
     guided_templates:
       - "../../auto_adapters/integration_templates/generic-backend.md"
@@ -107,8 +108,9 @@ security:
     file_permission: "0600"
 
 # ---------------------------------------------------------------------------
-# 业务接口契约（Phase 3 新增；遵循 references/business-contract-spec.md v1.0）
-# 注：本能力源码本期不重构（折中策略），仅声明对外契约供 contract-adapt.py 消费。
+# Business contract (Phase 3 new; follows references/business-contract-spec.md v1.0)
+# Note: Source code for this capability is not refactored in this phase (compromise strategy);
+# only declares the external contract for contract-adapt.py consumption.
 # ---------------------------------------------------------------------------
 business_contract:
   port_class: "src.adapters.base.SummarySink"
@@ -116,12 +118,12 @@ business_contract:
   mock_adapter: "src.adapters.mock.MockSink"
   customization_sop: "INTERFACE_ADAPT.md"
   external_apis:
-    # CRM / 工单系统：会话纪要写回
+    # CRM / Ticketing: write session summary back
     - name: summary.write_to_crm
       direction: outbound
       method: POST
       path: /sessions/{session_id}/summary
-      description: "会话 finalize 后把结构化摘要写入用户的 CRM / 工单 / 数据中台"
+      description: "After session finalize, write structured summary to user's CRM / ticketing / data platform"
       request_schema:
         session_id: string
         user_id: string
@@ -146,11 +148,11 @@ business_contract:
         name: Authorization
       timeout_ms: 5000
 
-    # 二次总结调用（复用 conversation-core 的 LLM 接口；此处不重复声明，仅引用）
+    # Secondary summarization call (reuses conversation-core LLM interface; declared here only as reference)
     - name: summary.llm_summarize
       direction: outbound
-      description: "复用 conversation-core 的 llm.chat_completions 接口；
-                    走相同的 LLM_API_URL / LLM_API_KEY 配置；不需要单独适配。"
+      description: "Reuses conversation-core llm.chat_completions interface;
+                    uses same LLM_API_URL / LLM_API_KEY config; no separate adaptation needed."
       method: POST
       path: "(see conversation-core: llm.chat_completions)"
       request_schema: {}
@@ -158,6 +160,6 @@ business_contract:
       adapter_slots: []
 
 acceptance:
-  - "每条 user/assistant 轮次落盘为 JSONL"
-  - "调用 finalize 后产出结构化摘要（含 topics / next_actions）"
-  - "落盘文件权限 0600，敏感字段自动脱敏"
+  - "Each user/assistant turn persisted as JSONL"
+  - "After calling finalize, produce structured summary (includes topics / next_actions)"
+  - "File permissions set to 0600, sensitive fields auto-redacted"

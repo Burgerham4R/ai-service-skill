@@ -1,4 +1,4 @@
-"""α/β 双轨制仲裁 测试。"""
+"""α/β dual-track arbitration tests."""
 import sys
 import unittest
 from pathlib import Path
@@ -54,7 +54,7 @@ class ArbitratorTests(unittest.TestCase):
     def test_alpha_only_when_beta_invoker_missing(self):
         r = ToolRegistry()
         r.register_beta(BetaTool(name="x", endpoint="https://example.com"))
-        # 不提供 beta_invoker
+        # No beta_invoker provided
         result = r.call("x", {})
         self.assertFalse(result.ok)
         self.assertIn("beta_invoker not provided", result.error)

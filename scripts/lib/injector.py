@@ -1,19 +1,20 @@
-"""按 manifest 注入点描述执行/规划代码注入。
+"""Execute / plan code injection per manifest injection point descriptions.
 
-position 字段统一使用三种格式（P2 标准化规范）：
-    before:函数名     在指定函数定义之前插入
-    after:函数名      在指定函数定义之后插入
-    replace:函数名    替换指定函数
+The position field uses three unified formats (P2 standardized spec):
+    before:<function_name>     Insert before the specified function definition
+    after:<function_name>      Insert after the specified function definition
+    replace:<function_name>    Replace the specified function
 
-为了跨语言通用，匹配采用宽松的"行级 + 函数关键字"启发式：
-    Python:    def 函数名(...)        / class 函数名(
-    JS/TS:     function 函数名(... )  / 函数名 = (...) =>
-    Java:      \\b函数名\\s*\\(
+For cross-language compatibility, matching uses relaxed "line-level + function keyword" heuristics:
+    Python:    def func_name(...)        / class func_name(
+    JS/TS:     function func_name(... )  / func_name = (...) =>
+    Java:      \\bfunc_name\\s*\\(
 
-骨架 conversation-core 的注入点目前仅声明在 .py 源码中，因此本模块的
-默认实现以 Python 为主；其他语言的注入仅返回"建议补丁"由 Agent 实施。
+The skeleton conversation-core injection points are currently only declared in .py source,
+so this module's default implementation is Python-focused. Injection for other languages
+only returns "suggested patches" for the Agent to apply.
 
-API：
+API:
     plan(injection_points, extensions, source_root) -> List[InjectionPlan]
     apply_plans(plans, dry_run=True) -> List[ApplyResult]
 """
@@ -186,16 +187,16 @@ _PY_DEF_RE_TPL = (
 
 
 def _locate_py_anchor(src: str, anchor: str):
-    """先按 def/class 严格定位；失败时退化为"行级通用 anchor"。
+    """First try strict def/class anchor; fallback to 'line-level generic anchor'.
 
-    通用 anchor 适用于 ``app.include_router``、``return foo()`` 等普通调用语句；
-    对该模式 before/after 即"在该行前/后插入"，replace 即"整行替换"。
+    Generic anchor applies to plain call statements like ``app.include_router``, ``return foo()``;
+    before/after means 'insert before/after that line'; replace means 'replace the entire line'.
     """
     pattern = re.compile(_PY_DEF_RE_TPL.format(name=re.escape(anchor)), re.MULTILINE)
     m = pattern.search(src)
     if m:
         return m, "block"
-    # 退化匹配：捕获含 anchor 的整行
+    # Fallback: capture the entire line containing the anchor
     loose = re.compile(
         r"^(?P<indent>[ \t]*)[^\n]*\b" + re.escape(anchor) + r"\b[^\n]*$",
         re.MULTILINE,
@@ -207,20 +208,19 @@ def _locate_py_anchor(src: str, anchor: str):
 
 
 def _apply_python(plan_item: InjectionPlan, src: str):
-    """对 Python 源码执行单个注入；始终返回 ``(ApplyResult, new_src_or_none)``。
+    """Execute a single injection on Python source; always returns ``(ApplyResult, new_src_or_none)``.
 
-    幂等保护
-    --------
-    若 ``plan_item.code`` 已存在于源码中（按 ``# [<capability>]`` 注释标记，
-    或片段整体子串匹配判定），则跳过本次注入并返回 ``applied=False`` 但
-    ``error="already_injected"``，避免重复跑 ``add-capability`` 时把同一
-    段代码插入 N 次。
+    Idempotency Protection
+    ----------------------
+    If ``plan_item.code`` already exists in the source (checked by ``# [<capability>]`` comment marker,
+    or full snippet substring match), this injection is skipped and returns ``applied=False`` with
+    ``error="already_injected"``, preventing duplicate inserts on repeated ``add-capability`` runs.
     """
     target = plan_item.target_abs_path
-    # 幂等判定：以 inline_code 第一行注释（含 [cap-name]）作为指纹。
-    # 不能仅用 `# [{capability}]` 因为同一 capability 在多个 inject 点（如
-    # agent.before_push_text + agent.after_start）会共享相同 marker，
-    # 导致第二个 inject 被误判跳过。
+    # Idempotency check: use first comment line in inline_code (containing [cap-name]) as fingerprint.
+    # Cannot solely rely on `# [{capability}]` because a single capability may have multiple
+    # injection points (e.g., agent.before_push_text + agent.after_start) sharing the same
+    # marker, which would cause the second injection to be falsely skipped.
     snippet_stripped = (plan_item.code or "").strip()
     fingerprint = next(
         (ln.strip() for ln in (plan_item.code or "").splitlines() if ln.strip()),
@@ -308,7 +308,7 @@ def apply_plans(
     *,
     dry_run: bool = True,
 ) -> List[ApplyResult]:
-    """执行注入计划。dry_run=True 时仅产出 diff 预览不写盘。"""
+    """Execute injection plans. dry_run=True only produces diff previews without writing to disk."""
     results: List[ApplyResult] = []
     grouped: Dict[Path, List[InjectionPlan]] = {}
     for p in plans:

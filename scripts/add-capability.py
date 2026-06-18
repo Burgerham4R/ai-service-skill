@@ -1,30 +1,30 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-"""能力包叠加 CLI。
+"""Capability overlay CLI.
 
-用法
-----
-    # 列出已发现的能力包及拓扑序
+Usage
+-----
+    # List discovered capability packages and their topological order
     python scripts/add-capability.py --list
 
-    # 添加能力包到当前项目（默认在 conversation-core 内注入扩展）
+    # Add capability packages to the current project (injects extensions into conversation-core by default)
     python scripts/add-capability.py knowledge-base
     python scripts/add-capability.py knowledge-base tool-calling --dry-run
 
-    # 在外部用户项目中渲染前端 / 后端适配器
+    # Render frontend / backend adapters in an external user project
     python scripts/add-capability.py knowledge-base \
         --target-project /path/to/user/repo \
         --tech-stack react
 
-    # 输出能力包依赖图（DOT）
+    # Output capability dependency graph (DOT format)
     python scripts/add-capability.py --graph
 
-行为
-----
-1. 扫描 capabilities/ 下全部 manifest，校验拓扑序、循环依赖、版本兼容
-2. 对要安装的能力包执行 manifest.extensions 注入到骨架（默认 dry-run）
-3. 若 --target-project 提供，按 tech_stack 检测结果调用 auto_adapters 三级降级渲染
-4. 输出诊断 JSON，便于 Agent 解析
+Behavior
+--------
+1. Scan all manifests under capabilities/, validate topological order, circular dependencies, version compatibility
+2. Execute manifest.extensions injection into skeleton for capability packages to be installed (dry-run by default)
+3. If --target-project is provided, invoke auto_adapters three-level degradation rendering based on tech_stack detection
+4. Output diagnostic JSON for easy Agent parsing
 """
 from __future__ import annotations
 
@@ -54,7 +54,7 @@ SKELETON_NAME = "conversation-core"
 
 
 # ---------------------------------------------------------------------------
-# 模板渲染
+# Template rendering
 # ---------------------------------------------------------------------------
 _VAR_RE = re.compile(r"\$\{([A-Z_][A-Z0-9_]*)\}")
 
@@ -73,7 +73,7 @@ def load_yaml(path: Path) -> Dict[str, Any]:
 
 
 # ---------------------------------------------------------------------------
-# 安装 / 注入
+# Install / Inject
 # ---------------------------------------------------------------------------
 @dataclass
 class InstallReport:
@@ -99,7 +99,7 @@ def inject_into_skeleton(
     *,
     dry_run: bool,
 ) -> List[Dict[str, Any]]:
-    """把 cap.extensions 注入到骨架对应文件。"""
+    """Inject cap.extensions into corresponding skeleton files."""
     skeleton_root = skeleton.path.parent if skeleton.path else CAPS_ROOT / SKELETON_NAME
     cap_root = cap.path.parent if cap.path else CAPS_ROOT / cap.name
     plans = ij.plan(
@@ -135,12 +135,12 @@ def render_adapter(
     *,
     dry_run: bool,
 ) -> Dict[str, Any]:
-    """对外部用户项目执行 auto_adapters 三级降级渲染。"""
+    """Execute auto_adapters three-level degradation rendering for an external user project."""
     integration = cap.integration or {}
     auto_adapters = integration.get("auto_adapters") or []
     fallback = integration.get("fallback") or {}
 
-    # 检测技术栈（若未传入则自动识别）
+    # Detect tech stack (auto-detect if not provided)
     detected = sd.detect(target_project) if not tech_stack else None
     primary = tech_stack or (detected.primary if detected else None)
     adapter_name = sd.match_adapter(primary or "", auto_adapters) if primary else None
@@ -168,7 +168,7 @@ def render_adapter(
                         src_tpl.read_text(encoding="utf-8"), variables
                     )
                     if abs_target.exists() and not dry_run:
-                        # 路径冲突 → 视为代码生成失败 → 降级 L2
+                        # Path conflict → treated as code generation failure → degrade to L2
                         code_gen_error = (
                             f"target file already exists: {abs_target}, refuse to overwrite"
                         )
@@ -185,7 +185,7 @@ def render_adapter(
                             }
                         )
                         code_gen_ok = True
-                        # 输出 install_hint
+                        # Output install_hint
                         artifacts.append(
                             {
                                 "type": "install_hint",
@@ -212,7 +212,7 @@ def render_adapter(
 
 
 def _merge_variables(adapter_mf: Dict[str, Any], tech_stack: str) -> Dict[str, str]:
-    # 优先级：env > adapters/manifest.yaml.default_variables > adapter.defaults
+    # Priority: env > adapters/manifest.yaml.default_variables > adapter.defaults
     top = load_yaml(ADAPTERS_ROOT / "manifest.yaml")
     out = {}
     out.update(top.get("default_variables") or {})
@@ -220,7 +220,7 @@ def _merge_variables(adapter_mf: Dict[str, Any], tech_stack: str) -> Dict[str, s
     for k in list(out.keys()):
         if os.getenv(k):
             out[k] = os.getenv(k, "")
-    # 强制类型为 str
+    # Force all values to str
     return {k: str(v) for k, v in out.items()}
 
 
@@ -292,17 +292,17 @@ def cmd_install(
 
 
 def main() -> None:
-    parser = argparse.ArgumentParser(description="能力包叠加 CLI")
-    parser.add_argument("capabilities", nargs="*", help="待安装的能力包名")
-    parser.add_argument("--list", action="store_true", help="列出已发现的能力包")
-    parser.add_argument("--graph", action="store_true", help="输出依赖图 DOT")
+    parser = argparse.ArgumentParser(description="Capability overlay CLI")
+    parser.add_argument("capabilities", nargs="*", help="Capability package names to install")
+    parser.add_argument("--list", action="store_true", help="List discovered capability packages")
+    parser.add_argument("--graph", action="store_true", help="Output dependency graph in DOT format")
     parser.add_argument(
         "--target-project", type=Path, default=None,
-        help="外部用户项目根目录（启用 auto_adapters 渲染）",
+        help="External user project root directory (enables auto_adapters rendering)",
     )
-    parser.add_argument("--tech-stack", default=None, help="覆盖自动识别的技术栈")
-    parser.add_argument("--apply", action="store_true", help="真实写入（默认 dry-run）")
-    parser.add_argument("--json", action="store_true", help="输出 JSON 便于 Agent 解析")
+    parser.add_argument("--tech-stack", default=None, help="Override auto-detected tech stack")
+    parser.add_argument("--apply", action="store_true", help="Actually write changes (default is dry-run)")
+    parser.add_argument("--json", action="store_true", help="Output JSON for easy Agent parsing")
     args = parser.parse_args()
 
     if args.list:

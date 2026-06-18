@@ -1,6 +1,6 @@
-"""ToolRegistry 加载器。
+"""ToolRegistry loader.
 
-YAML 声明示例：
+YAML declaration example:
     priority: alpha            # alpha | beta | manifest_order
     tools:
       - name: get_order
@@ -12,11 +12,11 @@ YAML 声明示例：
           endpoint: "https://internal.example.com/api/orders"
           method: "POST"
           timeout_ms: 5000
-        description: "查询订单"
+        description: "Query order"
 
-加载策略：
-- α 轨函数通过 ``importlib`` 动态加载；模块缺失时该工具仅保留 β 轨。
-- β 轨为纯声明，调用由 dispatcher 注入 ``beta_invoker`` 完成。
+Loading strategy:
+- Alpha-track functions loaded dynamically via ``importlib``; when a module is missing, the tool retains only the beta track.
+- Beta track is declaration-only; invocation is done by dispatcher injecting ``beta_invoker``.
 """
 from __future__ import annotations
 
@@ -29,7 +29,7 @@ from typing import Any, Dict, List, Optional
 
 import yaml
 
-# 通过相对路径引入仲裁器（Phase 2 共享基础设施）
+# Import arbitrator via relative path (Phase 2 shared infrastructure)
 import sys
 _PROJECT_ROOT = Path(__file__).resolve().parents[3]
 if str(_PROJECT_ROOT) not in sys.path:
@@ -134,8 +134,8 @@ class ToolRegistryLoader:
         try:
             module = importlib.import_module(mod_name)
         except ImportError:
-            # 兜底：能力包目录名是连字符（tool-calling），标准 import 解析不到
-            # capabilities.tool_calling.* —— 改为按文件路径加载（registry 知道自身位置）。
+            # Fallback: capability directory name has hyphens (tool-calling), standard import cannot resolve it
+            # capabilities.tool_calling.* - switched to file-path-based loading (registry knows its own location).
             module = ToolRegistryLoader._load_module_by_path(mod_name)
         if module is None:
             logger.warning("alpha tool module not loadable: %s", mod_name)
@@ -144,16 +144,16 @@ class ToolRegistryLoader:
 
     @staticmethod
     def _load_module_by_path(mod_name: str):
-        """把点分模块名映射到能力包内文件路径并加载。
+        """Map dotted module name to file path within capability package and load.
 
-        约定：模块名形如 ``capabilities.tool_calling.examples.local_tools``，
-        取 ``examples`` 段及之后部分作为相对 ``<capability_root>`` 的路径。
+        Convention: module name like ``capabilities.tool_calling.examples.local_tools``,
+        take the ``examples`` segment and everything after as the path relative to ``<capability_root>``.
         """
         import importlib.util
 
         cap_root = Path(__file__).resolve().parent.parent  # capabilities/tool-calling/
         parts = mod_name.split(".")
-        # 去掉前缀 capabilities.<cap>（无论下划线 / 连字符），保留 examples/... 尾部
+        # Strip capabilities.<cap> prefix (regardless of underscores / hyphens), keep the examples/... tail
         tail: List[str] = []
         seen_examples = False
         for p in parts:
@@ -162,7 +162,7 @@ class ToolRegistryLoader:
             if seen_examples:
                 tail.append(p)
         if not tail:
-            tail = parts[-2:]  # 退而求其次：取最后两段
+            tail = parts[-2:]  # Fallback: take last two segments
         file_path = cap_root.joinpath(*tail).with_suffix(".py")
         if not file_path.is_file():
             return None
@@ -185,13 +185,13 @@ class ToolRegistryLoader:
 
 
 # ---------------------------------------------------------------------------
-# β 轨默认实现：requests 同步 POST / GET
+# Beta-track default implementation: requests sync POST / GET
 # ---------------------------------------------------------------------------
 def _default_beta_invoker(tool: BetaTool, params: Dict[str, Any]) -> Any:
-    import requests  # 已在骨架 requirements 中
+    import requests  # Already in skeleton requirements
 
     if not tool.endpoint.startswith("https://") and not tool.endpoint.startswith("http://localhost"):
-        # 安全：除本机调试外，β 轨强制 HTTPS（manifest.security.network.enforce_https）
+        # Security: except localhost debugging, beta-track enforces HTTPS (manifest.security.network.enforce_https)
         raise RuntimeError(f"β endpoint must use HTTPS: {tool.endpoint}")
     headers = {"Content-Type": "application/json", **tool.headers}
     timeout = max(tool.timeout_ms, 100) / 1000.0
@@ -210,7 +210,7 @@ def _default_beta_invoker(tool: BetaTool, params: Dict[str, Any]) -> Any:
 
 
 # ---------------------------------------------------------------------------
-# 全局单例（供 dispatcher / router 引用）
+# Global singleton (used by dispatcher / router)
 # ---------------------------------------------------------------------------
 _global_loader = ToolRegistryLoader()
 

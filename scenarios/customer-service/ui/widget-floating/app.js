@@ -1,13 +1,13 @@
 /* =====================================================================
- * AI 客服浮窗 —— 轻量版（真接通 Conversational AI）
+ * AI Customer Service Widget — Lightweight Version (Real Conversational AI Connection)
  *
- * 与旧版（写死 IM）的本质区别：
- *   - 通过 agent-link.js 真正接通 conversation-core 的 AI（TRTC + agent/start）
- *   - AI 回复来自 LLM 字幕回流，而非本地写死文案
- *   - 能力（转人工 / 工具调用）按后端实际启用情况动态挂载
- *   - KB 走 silent RAG：命中只在后台增强，不在对话里贴 FAQ 原文
+ * Key differences from the old (hardcoded IM) version:
+ *   - Uses agent-link.js to actually connect to conversation-core AI (TRTC + agent/start)
+ *   - AI replies come from LLM subtitle stream, not locally hardcoded text
+ *   - Capabilities (handoff / tool calling) are dynamically mounted based on backend availability
+ *   - KB uses silent RAG: hits only augment in the background, no FAQ text in the chat
  *
- * 后端能力探测（feature-probe，未安装的能力对应路由不存在 → 404）：
+ * Backend capability probing (feature-probe; uninstalled capability routes → 404):
  *   GET /api/v1/handoff/status     human-handoff
  *   GET /api/v1/tools/list         tool-calling
  *   GET /api/v1/summary/_list      session-summary
@@ -35,17 +35,22 @@
   const hintText = document.querySelector('[data-role="kb-hit-text"]');
   const navAdmin = document.querySelector('[data-role="nav-admin"]');
 
-  const HANDOFF_KEYWORDS = ["人工", "转人工", "客服", "real person", "talk to agent", "speak to a human", "human agent"];
+  const HANDOFF_KEYWORDS = ["talk to agent", "real person", "speak to a human", "human agent", "support", "help me"];
   const HANDOFF_QUEUE_MS = 8000;
   const SIM_AGENT_ID = "demo_agent_alex";
   const KB_MIN_SCORE = 0.15;
 
-  // 转人工接通模式（mock vs 真实接入，两套逻辑都需维护）：
-  //   true  = mock 演示：local_queue 适配器下没有真实座席，排队 HANDOFF_QUEUE_MS 后
-  //           由前端主动调 POST /api/v1/handoff/connect 模拟座席接单，便于无真实坐席时跑通闭环。
-  //   false = 真实接入：座席在你的工单系统侧真实接单（HH_ADAPTER=default_rest），
-  //           前端不伪造接通，仅轮询 GET /api/v1/handoff/{session_id} 反映真实状态。
-  // 两种模式下「排队 banner 显示 / 接通·取消后隐藏 + 灰字提示」的 UI 逻辑完全一致。
+  // Handoff connection mode (mock vs real, both code paths must be maintained):
+  //   true  = mock demo: with the local_queue adapter there is no real agent; after
+  //           HANDOFF_QUEUE_MS the frontend calls POST /api/v1/handoff/connect to
+  //           simulate an agent taking the ticket, so the full flow can be demonstrated
+  //           without a real agent.
+  //   false = real integration: an agent actually picks up the ticket in your
+  //           ticketing system (HH_ADAPTER=default_rest); the frontend does not fake
+  //           the connection — it only polls GET /api/v1/handoff/{session_id} to
+  //           reflect the real status.
+  // In both modes the UI logic for "queue banner show / hide on connect or cancel
+  // + muted status text" is identical.
   const SIMULATE_AGENT_CONNECT = true;
 
   const caps = { handoff: false, tools: false, summary: false };

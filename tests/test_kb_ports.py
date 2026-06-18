@@ -1,9 +1,9 @@
-"""Phase 3 阶段 6：knowledge-base 能力包 ports/adapters 单元测试。
+"""Phase 3 Stage 6: knowledge-base capability ports/adapters unit tests.
 
-覆盖目标：
-- LocalJsonKbClient：reload / search（TF-IDF）/ upsert / delete + stats
-- MockKbClient：5 条 demo FAQ 预填 + 检索能命中关键字
-- DefaultRestKbClient：base_url 安全校验 + search/list_all 经过 HTTP 透传
+Coverage targets:
+- LocalJsonKbClient: reload / search (TF-IDF) / upsert / delete + stats
+- MockKbClient: 5 pre-seeded demo FAQ entries + keyword search hits
+- DefaultRestKbClient: base_url security validation + search/list_all via HTTP passthrough
 """
 from __future__ import annotations
 
@@ -16,7 +16,7 @@ from unittest.mock import MagicMock, patch
 
 
 # ---------------------------------------------------------------------------
-# 隔离 import：清理 src.* 缓存（避免与 test_handoff_ports 中同名 src 冲突）
+# Isolated import: clean src.* cache (avoid conflict with same-named src in test_handoff_ports)
 # ---------------------------------------------------------------------------
 _ROOT = Path(__file__).resolve().parent.parent
 _KB = _ROOT / "capabilities" / "knowledge-base"
@@ -83,7 +83,7 @@ class LocalJsonAdapterTests(unittest.TestCase):
         hits = self.client.search("退款", top_k=3)
         self.assertTrue(len(hits) >= 1)
         self.assertEqual(hits[0].entry.id, "kb_refund")
-        # score 应 > 0
+        # score should be > 0
         self.assertGreater(hits[0].score, 0.0)
 
     def test_search_returns_empty_for_blank_query(self):
@@ -122,7 +122,7 @@ class LocalJsonAdapterTests(unittest.TestCase):
         ok = self.client.delete("kb_ship")
         self.assertTrue(ok)
         self.assertEqual(len(self.client.list_all()), 1)
-        # 不存在的 id 返回 False
+        # Non-existent id returns False
         self.assertFalse(self.client.delete("nonexistent"))
 
 
@@ -184,7 +184,7 @@ class DefaultRestKbAdapterSecurityTests(unittest.TestCase):
 
         self.assertEqual(len(hits), 1)
         self.assertEqual(hits[0].entry.id, "1")
-        # 请求 URL 路径
+        # Request URL path
         args, kwargs = p.call_args
         self.assertTrue(args[0].endswith("/faq/search"))
         self.assertEqual(kwargs["json"]["query"], "退款")

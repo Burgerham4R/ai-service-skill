@@ -1,13 +1,13 @@
-"""knowledge-base 抽象端口（Port）。
+"""knowledge-base abstract port (Port).
 
-与 manifest.yaml.business_contract.external_apis 对齐：
+Aligned with manifest.yaml.business_contract.external_apis:
 - search   -> faq.search
 - list_all -> faq.list
 - upsert   -> faq.upsert
 - delete   -> faq.delete
 
-所有具体实现（local_json / default_rest / mock / user_custom）必须继承本 ABC。
-core 层只依赖本接口。
+All concrete implementations (local_json / default_rest / mock / user_custom) must inherit this ABC.
+The core layer only depends on this interface.
 """
 from __future__ import annotations
 
@@ -18,10 +18,10 @@ from ..core.models import FaqEntry, KbStats, SearchHit
 
 
 class KnowledgeBaseClient(ABC):
-    """知识库后端的统一接口契约。"""
+    """Unified interface contract for knowledge base backends."""
 
     # ------------------------------------------------------------------
-    # 与 business_contract 对齐
+    # Aligned with business_contract
     # ------------------------------------------------------------------
     @abstractmethod
     def search(
@@ -31,25 +31,25 @@ class KnowledgeBaseClient(ABC):
         top_k: Optional[int] = None,
         min_score: Optional[float] = None,
     ) -> List[SearchHit]:
-        """检索匹配的 FAQ。对应 business_contract.faq.search。"""
+        """Search for matching FAQ entries. Corresponds to business_contract.faq.search."""
 
     @abstractmethod
     def list_all(self) -> List[FaqEntry]:
-        """列出所有条目。对应 business_contract.faq.list。"""
+        """List all entries. Corresponds to business_contract.faq.list."""
 
     @abstractmethod
     def upsert(self, entry: FaqEntry) -> FaqEntry:
-        """新增或更新单条。对应 business_contract.faq.upsert。"""
+        """Create or update a single entry. Corresponds to business_contract.faq.upsert."""
 
     @abstractmethod
     def delete(self, entry_id: str) -> bool:
-        """删除单条。对应 business_contract.faq.delete。"""
+        """Delete a single entry. Corresponds to business_contract.faq.delete."""
 
     # ------------------------------------------------------------------
-    # 看板辅助方法（默认实现：远程后端可不覆写）
+    # Dashboard helper methods (default implementation; remote backends may not override)
     # ------------------------------------------------------------------
     def stats(self) -> KbStats:
-        """返回统计信息（默认基于 list_all 实时计算）。"""
+        """Return statistics (defaults to live calculation based on list_all)."""
         items = self.list_all()
         return KbStats(
             backend=type(self).__name__,
@@ -57,5 +57,5 @@ class KnowledgeBaseClient(ABC):
         )
 
     def reload(self) -> int:
-        """从外部源重载数据。默认 no-op；本地实现可覆写为重读文件。"""
+        """Reload data from external source. Default no-op; local implementations can override to re-read files."""
         return len(self.list_all())

@@ -1,9 +1,9 @@
-"""会话轮次记录器。
+"""Session turn recorder.
 
-落盘策略：
-- 每个 session 在 storage_dir 下生成 ``{session_id}.json``，权限 0600。
-- 写入前对敏感字段执行脱敏（与骨架 log_filter 同标准）。
-- 文件结构：
+Persistence strategy:
+- Each session generates ``{session_id}.json`` under storage_dir, permissions 0600.
+- Sensitive fields redacted before writing (same standard as skeleton log_filter).
+- File structure:
     {
       "session_id": "...",
       "opened_at": 1717830000.0,
@@ -12,7 +12,7 @@
         {"role": "user", "ts": 1717830001.0, "text": "..."},
         {"role": "assistant", "ts": 1717830002.0, "text": "..."}
       ],
-      "summary": null  # finalize 后填充
+      "summary": null  # Populated after finalize
     }
 """
 from __future__ import annotations
@@ -36,7 +36,7 @@ _DEFAULT_STORAGE_DIR = Path(
 _RETENTION_DAYS = int(os.getenv("SS_RETENTION_DAYS", "30"))
 
 
-# 默认脱敏模式（与骨架 log_filter 对齐）
+# Default redaction mode (aligned with skeleton log_filter)
 _REDACT_PATTERNS = [
     re.compile(r"(?i)(secret_id|secret_key|api_key|token|credential|authorization)\s*[:=]\s*([^\s,'\"\\]+)"),
 ]
@@ -189,7 +189,7 @@ class Recorder:
 
 
 # ---------------------------------------------------------------------------
-# 全局单例 + manifest.extensions 注入函数
+# Global singleton + manifest.extensions injection functions
 # ---------------------------------------------------------------------------
 _global_recorder = Recorder()
 

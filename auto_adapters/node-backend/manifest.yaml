@@ -2,14 +2,14 @@ name: "node-backend"
 version: "1.0.0"
 target_role: "backend"
 tech_stack: ["express", "koa", "fastify"]
-description: "Node.js 后端反向代理：把 ${ROUTE_PREFIX}/* 透传到骨架 ${SKELETON_BASE_URL}${API_PREFIX}/*"
+description: "Node.js backend reverse proxy: transparently proxy ${ROUTE_PREFIX}/* to skeleton ${SKELETON_BASE_URL}${API_PREFIX}/*"
 
 templates:
   express:
     file: "express.js.tpl"
     target_path: "routes/voice-agent.js"
     install_hint: |
-      在 Express 应用中：
+      In Express app:
         const voiceAgent = require('./routes/voice-agent');
         app.use('${ROUTE_PREFIX}', voiceAgent);
     package_dependencies:
@@ -19,7 +19,7 @@ templates:
     file: "koa.js.tpl"
     target_path: "routes/voice-agent.js"
     install_hint: |
-      在 Koa 应用中：
+      In Koa app:
         const Router = require('@koa/router');
         const proxy = require('./routes/voice-agent');
         app.use(proxy.routes()).use(proxy.allowedMethods());
@@ -30,7 +30,7 @@ templates:
     file: "fastify.js.tpl"
     target_path: "routes/voice-agent.js"
     install_hint: |
-      在 Fastify 应用中：
+      In Fastify app:
         const voiceAgent = require('./routes/voice-agent');
         fastify.register(voiceAgent, { prefix: '${ROUTE_PREFIX}' });
     package_dependencies:
@@ -44,4 +44,4 @@ defaults:
 
 security:
   https_required: true
-  forbid_internal_ip: true   # 反代目标默认禁止指向内网（10/192.168/172.16-31/9/11/21/30 段）
+  forbid_internal_ip: true   # Reverse proxy target defaults to rejecting private network ranges (10/192.168/172.16-31/9/11/21/30)

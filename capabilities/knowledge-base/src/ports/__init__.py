@@ -1,4 +1,4 @@
-"""knowledge-base 抽象端口模块。"""
+"""knowledge-base abstract ports module."""
 from .kb_client import KnowledgeBaseClient
 
 __all__ = ["KnowledgeBaseClient"]

@@ -1,12 +1,12 @@
-"""技术栈识别。
+"""Tech stack detection.
 
-读取目标项目根目录的信号文件，输出标准化的 tech_stack 标签：
+Reads signal files from the target project root and outputs standardized tech_stack labels:
     react / vue / angular / next /
     express / koa / fastify /
     spring-boot / quarkus /
     flask / fastapi / django
 
-检测失败时 primary 为 None，由 degrader 决定降级到 L2 或 L3。
+On detection failure, primary is None; degrader decides fallback to L2 or L3.
 """
 from __future__ import annotations
 
@@ -109,7 +109,7 @@ def _detect_python(project: Path, signals: List[str]) -> List[str]:
     blob = "\n".join(chunks)
     if not blob:
         return out
-    # 顺序：fastapi 优先级高于 flask（部分项目同时声明）
+    # Order: fastapi has higher priority than flask (some projects declare both)
     if "fastapi" in blob:
         out.append("fastapi")
     if "django" in blob:
@@ -129,7 +129,7 @@ def _ordered_unique(items: Iterable[str]) -> List[str]:
 
 
 def detect(project_root: Path) -> DetectResult:
-    """对目标项目执行技术栈识别。"""
+    """Run tech stack detection on the target project."""
     project_root = Path(project_root).resolve()
     signals: List[str] = []
     cands: List[str] = []
@@ -138,7 +138,7 @@ def detect(project_root: Path) -> DetectResult:
     cands += _detect_python(project_root, signals)
     cands = _ordered_unique(cands)
 
-    # 按 _PRIORITY 选 primary
+    # Select primary by _PRIORITY
     primary: Optional[str] = None
     for label in _PRIORITY:
         if label in cands:
@@ -148,7 +148,7 @@ def detect(project_root: Path) -> DetectResult:
 
 
 def match_adapter(tech_stack: str, auto_adapters: list) -> Optional[str]:
-    """在 manifest.integration.auto_adapters 中查找命中的 adapter 名称。"""
+    """Find the matching adapter name in manifest.integration.auto_adapters."""
     if not tech_stack or not auto_adapters:
         return None
     for entry in auto_adapters:

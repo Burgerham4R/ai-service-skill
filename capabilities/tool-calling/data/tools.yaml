@@ -1,16 +1,16 @@
-# tool-calling 默认工具注册表 —— 通用 AI 客服工具集（行业中立）
+# tool-calling default tool registry — generic AI customer service toolset (industry-neutral)
 #
-# 双轨说明：
-#   alpha（α 轨）= 本地函数 / mock 实现：开箱即用，无需真实后端，便于本地演示
-#   beta （β 轨）= 远程 HTTPS API：接真实业务系统时把 endpoint 指向你的接口
-# 默认 priority=alpha：优先走本地 mock；如需强制走真实接口可改 priority 或单次 invoke 传 priority=beta。
-# 接口对不齐时，参照 INTERFACE_ADAPT.md 做请求 / 响应字段映射。
+# Dual-track notes:
+#   alpha (α track) = local function / mock implementation: works out of the box, no real backend needed, easy local demo
+#   beta  (β track) = remote HTTPS API: point the endpoint at your real business system
+# Default priority=alpha: prefer local mock; change priority or pass priority=beta in a single invoke to force real API.
+# When interfaces don't align, refer to INTERFACE_ADAPT.md for request/response field mapping.
 
 priority: alpha    # alpha | beta | manifest_order
 
 tools:
   - name: query_order_status
-    description: "查询单据/订单/工单状态（输入 order_id），通用客服高频动作"
+    description: "Query document/order/ticket status (input order_id) — high-frequency customer service action"
     alpha:
       module: "capabilities.tool_calling.examples.local_tools"
       function: "query_order_status"
@@ -22,7 +22,7 @@ tools:
       headers: {}
 
   - name: get_business_info
-    description: "查询营业信息：营业时间/地址/联系方式（topic=hours|address|contact|all）"
+    description: "Query business info: hours/address/contact (topic=hours|address|contact|all)"
     alpha:
       module: "capabilities.tool_calling.examples.local_tools"
       function: "get_business_info"
@@ -34,7 +34,7 @@ tools:
       headers: {}
 
   - name: book_appointment
-    description: "创建预约/预订：餐厅订位、服务预约等（date, time_slot, party_size）"
+    description: "Create appointment/booking: restaurant reservations, service appointments, etc. (date, time_slot, party_size)"
     alpha:
       module: "capabilities.tool_calling.examples.local_tools"
       function: "book_appointment"
@@ -46,7 +46,7 @@ tools:
       headers: {}
 
   - name: submit_feedback
-    description: "提交满意度评分/反馈（rating 1-5, comment），会话尾部常见动作"
+    description: "Submit satisfaction rating/feedback (rating 1-5, comment) — common end-of-session action"
     alpha:
       module: "capabilities.tool_calling.examples.local_tools"
       function: "submit_feedback"

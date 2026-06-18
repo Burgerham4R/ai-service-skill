@@ -1,13 +1,13 @@
-"""Best-effort 联动 session-summary（可选能力）。
+"""Best-effort linkage with session-summary (optional capability).
 
-当转人工建单时，自动为该 session 生成一份会话纪要并挂到工单上，
-让坐席在工单详情里立刻看到客户问题上下文，无需手动点"生成纪要"。
+When a handoff ticket is created, auto-generate a session summary and attach it to the ticket,
+so agents can see customer issue context directly in the ticket details — no need to manually click "generate summary".
 
-设计原则：
-- 软依赖：session-summary 未安装时静默 no-op，不影响转人工主流程。
-- 不阻塞：默认走启发式摘要（本地零延迟），不在建单链路里调用 LLM。
-- 解耦：通过 conversation-core 的 _capability_loader 动态加载，
-  human-handoff 不对 session-summary 产生静态 import 依赖。
+Design principles:
+- Soft dependency: silently no-ops when session-summary is not installed; does not affect the handoff main flow.
+- Non-blocking: defaults to heuristic summary (local, zero latency); does not call LLM in the ticket creation chain.
+- Decoupled: dynamically loaded via conversation-core's _capability_loader;
+  human-handoff has no static import dependency on session-summary.
 """
 from __future__ import annotations
 
@@ -23,7 +23,7 @@ _loader_resolved = False
 
 
 def _get_loader() -> Optional[Any]:
-    """动态加载 conversation-core 的 _capability_loader（自身无相对导入，可独立加载）。"""
+    """Dynamically load conversation-core's _capability_loader (no relative imports, can load independently)."""
     global _loader, _loader_resolved
     if _loader_resolved:
         return _loader
@@ -49,9 +49,9 @@ def _get_loader() -> Optional[Any]:
 
 
 def attach_summary_to_ticket(ticket: Any) -> None:
-    """为工单对应的 session 生成纪要并写入 ticket.extra['session_summary']。
+    """Generate summary for the session corresponding to the ticket and write to ticket.extra['session_summary'].
 
-    session-summary 未安装 / 任何异常 → 静默跳过（不影响建单主流程）。
+    session-summary not installed / any exception → silently skip (does not affect ticket creation main flow).
     """
     loader = _get_loader()
     if loader is None:
@@ -65,9 +65,9 @@ def attach_summary_to_ticket(ticket: Any) -> None:
         recorder = recorder_mod.get_recorder()
         rec = recorder.get(session_id)
         if rec is None:
-            return  # 该会话没有记录（如看板手工插入的测试工单），跳过
-        # 建单链路走启发式摘要（本地、零延迟），避免 LLM 调用阻塞转人工；
-        # 坐席如需更精炼的版本，可在看板里点"重新生成"走 LLM。
+            return  # No records for this session (e.g. manually inserted test ticket on dashboard), skip
+        # Ticket creation chain uses heuristic summary (local, zero latency) to avoid LLM calls blocking handoff;
+        # if agents need a more refined version, they can click "regenerate" on the dashboard to use LLM.
         summary = summarizer_mod.summarize(rec, prefer_llm=False)
         recorder.finalize(session_id, summary)
         ticket.extra["session_summary"] = summary

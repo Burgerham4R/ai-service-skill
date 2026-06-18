@@ -1,15 +1,16 @@
 /* =====================================================================
- * 浮窗客服 UI —— 仅引用 design tokens；禁止硬编码 hex / px（除了 0、1px 描边）
- * 入口：scenarios/customer-service/ui/widget-floating/index.html
- * 来源：DESIGN_GUIDELINES.md（深色毛玻璃 + 薄荷绿）
+ * Widget Customer Service UI — Design tokens only; no hardcoded hex/px (except 0, 1px strokes)
+ * Entry: scenarios/customer-service/ui/widget-floating/index.html
+ * Source: DESIGN_GUIDELINES.md (dark glassmorphism + mint green)
  * ===================================================================== */
 
-/* ---------- 复位 / 全局 ---------- */
+/* ---------- Reset / Global ---------- */
 *, *::before, *::after { box-sizing: border-box; }
 
-/* HTML hidden 属性必须真正隐藏元素：
-   否则 .handoff-banner{display:flex} / .icon-btn{display:inline-flex}
-   等作者样式会因优先级更高而覆盖 [hidden] 的 display:none，导致元素误显示。 */
+/* HTML hidden attribute must truly hide elements:
+   Otherwise .handoff-banner{display:flex} / .icon-btn{display:inline-flex}
+   and similar author styles, having higher specificity, will override
+   [hidden]'s display:none, causing elements to be wrongly shown. */
 [hidden] { display: none !important; }
 
 html, body {

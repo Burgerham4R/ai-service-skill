@@ -1,1 +1,1 @@
-"""tool-calling 内置示例工具命名空间。"""
+"""tool-calling built-in example tools namespace."""

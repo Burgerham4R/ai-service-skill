@@ -1,4 +1,4 @@
-"""tool-calling FastAPI 子路由。"""
+"""tool-calling FastAPI sub-router."""
 from __future__ import annotations
 
 from typing import Any, Dict, Optional
@@ -26,7 +26,7 @@ def list_tools() -> dict:
 def invoke(req: InvokeRequest) -> dict:
     result = get_loader().call(req.name, req.params, priority=req.priority)
     if not result.ok:
-        # 200 + ok=false 还是 502？这里使用 200，调用方按 ok 字段判断；β 网络错走 502
+        # 200 + ok=false or 502? Here we use 200; caller judges by ok field; beta network errors use 502
         if result.track == "beta" and "Connection" in (result.error or ""):
             raise HTTPException(status_code=502, detail=result.error)
     return {

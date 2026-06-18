@@ -1,10 +1,11 @@
-"""TLS-SIG-API-v2 UserSig 生成器（纯 Python 实现，无第三方依赖）。
+"""TLS-SIG-API-v2 UserSig generator (pure Python, no third-party dependencies).
 
-TRTC 房间鉴权使用 SDKAppID + SDKSecretKey 对 UserId 做 HMAC-SHA256
-签名，再以 zlib 压缩+base64url 编码得到 UserSig。本实现与官方
-``TLSSigAPIv2`` 行为一致，便于在最小骨架中无需引入额外 SDK。
+TRTC room authentication uses SDKAppID + SDKSecretKey to sign the UserId via HMAC-SHA256,
+then compresses with zlib + base64url encodes to produce the UserSig. This implementation
+matches the official ``TLSSigAPIv2`` behavior, enabling usage in a minimal skeleton without
+additional SDKs.
 
-参考：https://cloud.tencent.com/document/product/647/17275
+Reference: https://cloud.tencent.com/document/product/647/17275
 """
 from __future__ import annotations
 
@@ -18,7 +19,7 @@ import zlib
 
 def _base64_encode(data: bytes) -> str:
     s = base64.b64encode(data).decode("utf-8")
-    # TRTC 自定义 base64url：+ -> *、/ -> -、= -> _
+    # TRTC custom base64url: + → *, / → -, = → _
     return s.replace("+", "*").replace("/", "-").replace("=", "_")
 
 
@@ -52,16 +53,16 @@ def gen_user_sig(
     user_id: str,
     expire_seconds: int = 86400,
 ) -> str:
-    """生成 UserSig。
+    """Generate a UserSig.
 
     Args:
-        sdk_app_id: TRTC SDKAppID（整数）。
-        sdk_secret_key: TRTC SDKSecretKey。
-        user_id: 房间内用户标识，需保持稳定。
-        expire_seconds: 有效期（秒），默认 24 小时。
+        sdk_app_id: TRTC SDKAppID (integer).
+        sdk_secret_key: TRTC SDKSecretKey.
+        user_id: User identifier within the room; must remain stable.
+        expire_seconds: Validity duration in seconds, default 24 hours.
 
     Returns:
-        可直接用于 TRTC Web SDK 入房的 UserSig 字符串。
+        A UserSig string ready for use with the TRTC Web SDK for room entry.
     """
     if not sdk_app_id or not sdk_secret_key:
         raise ValueError("sdk_app_id and sdk_secret_key are required")

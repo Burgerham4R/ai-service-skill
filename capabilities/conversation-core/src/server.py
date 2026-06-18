@@ -1,17 +1,17 @@
-"""FastAPI 入口：暴露骨架 REST API + 静态 Web Demo。
+"""FastAPI entry point: exposes skeleton REST API + static Web Demo.
 
-路由：
-  GET  /api/v1/health          —— 三把 Key 实时连通性
-  POST /api/v1/get_config      —— 生成 RoomId / UserSig / 模态配置
-  POST /api/v1/agent/start     —— 启动 AI 对话任务
-  POST /api/v1/agent/stop      —— 停止 AI 对话任务
-  POST /api/v1/agent/control   —— 文本注入 / 打断
-  GET  /                       —— Web Demo 静态页
+Routes:
+  GET  /api/v1/health          —— Real-time connectivity check for 3 keys
+  POST /api/v1/get_config      —— Generate RoomId / UserSig / modality config
+  POST /api/v1/agent/start     —— Start AI conversation task
+  POST /api/v1/agent/stop      —— Stop AI conversation task
+  POST /api/v1/agent/control   —— Text injection / interrupt
+  GET  /                       —— Web Demo static page
 
-设计原则（与 §3.3 对齐）：
-  - 零行业预设：所有路由仅做协议编排，不内置任何业务 Prompt
-  - 配置即验证：health 端点为 Web Demo 三盏灯提供数据源
-  - 安全合规：启动时安装日志脱敏过滤器，凭证仅来自环境变量
+Design principles (aligned with §3.3):
+  - Zero industry assumptions: all routes only do protocol orchestration, no built-in business prompts
+  - Configuration as verification: health endpoint provides data source for Web Demo's three LEDs
+  - Security compliance: log redaction filter installed at startup; credentials from env vars only
 """
 from __future__ import annotations
 
@@ -22,7 +22,7 @@ from typing import Any, Dict, Optional
 
 from dotenv import load_dotenv
 
-# 在导入业务模块前加载 .env，确保 credentials 模块读到正确的环境变量
+# Load .env before importing business modules to ensure credentials module reads correct env vars
 _BASE_DIR = Path(__file__).resolve().parent.parent
 load_dotenv(_BASE_DIR / ".env.local")
 load_dotenv(_BASE_DIR / ".env")
@@ -42,7 +42,7 @@ from .trtc_client import AgentLifecycleConfig
 
 logger = logging.getLogger("conversation_core")
 
-# 安装日志脱敏过滤器（P0 安全项）
+# Install log redaction filter (P0 security requirement)
 logging.basicConfig(
     level=os.getenv("LOG_LEVEL", "INFO"),
     format="%(asctime)s [%(levelname)s] %(name)s: %(message)s",
@@ -51,16 +51,16 @@ install_redacting_filter(logging.getLogger())
 
 
 # ---------------------------------------------------------------------------
-# 全局 Agent 单例（启动失败不影响 /api/v1/health 给出明确诊断）
+# Global Agent singleton (startup failure does not prevent /api/v1/health from giving clear diagnostics)
 # ---------------------------------------------------------------------------
 _credentials = load_from_env()
-_io_modality = IoModality()  # Phase 1 默认全模态启用
+_io_modality = IoModality()  # Phase 1 default: all modalities enabled
 _agent: Optional[ConversationAgent] = None
 _init_error: Optional[str] = None
 try:
     _agent = ConversationAgent(_credentials, _io_modality)
     logger.info("ConversationAgent initialized")
-except Exception as exc:  # 凭证缺失等问题不能让进程启动失败
+except Exception as exc:  # Credential missing etc. must not crash the process
     _init_error = str(exc)
     logger.warning("ConversationAgent not initialized: %s", _init_error)
 
@@ -74,11 +74,11 @@ class GetConfigRequest(BaseModel):
 
 
 class StartAgentRequest(BaseModel):
-    session_id: str = Field(..., description="get_config 返回的 session_id")
+    session_id: str = Field(..., description="session_id returned by get_config")
     instructions: Optional[str] = None
     greeting: Optional[str] = None
     language: Optional[str] = "en"  # en | zh
-    voice_id: Optional[str] = None  # 留空使用 DEFAULT_VOICE_IDS 按 language 选择
+    voice_id: Optional[str] = None  # Leave empty to use DEFAULT_VOICE_IDS selected by language
     max_idle_time: Optional[int] = 60
 
 
@@ -98,7 +98,7 @@ class ControlRequest(BaseModel):
 app = FastAPI(
     title="conversation-core",
     version="1.0.0",
-    description="TRTC Voice Agent 通用骨架（无业务预设）",
+    description="TRTC Voice Agent generic skeleton (no business assumptions)",
 )
 app.add_middleware(
     CORSMiddleware,
@@ -137,7 +137,7 @@ def _require_agent() -> ConversationAgent:
 # ---------------------------------------------------------------------------
 @api.get("/health")
 def health() -> Dict[str, Any]:
-    """实时探测三把 Key 连通性，供 Web Demo 顶部状态栏使用。"""
+    """Real-time probe of 3 keys' connectivity, used by Web Demo top status bar."""
     cred = load_from_env()
     tc, trtc, llm = check_all(cred.tencent_cloud, cred.trtc, cred.llm)
     overall = "ok" if tc.ok and trtc.ok and llm.ok else "partial_failure"
@@ -213,10 +213,10 @@ def sessions_list() -> Dict[str, Any]:
 
 
 # ---------------------------------------------------------------------------
-# Debug 端点：用于排查 InvalidParameter.UserSig 等问题
-# 把当前配置 + 一份测试 UserSig 输出，方便对照 TRTC 官方工具校验：
+# Debug endpoint: for troubleshooting InvalidParameter.UserSig etc.
+# Outputs current config + a test UserSig for comparison against the TRTC official tool:
 #   https://console.cloud.tencent.com/trtc/usersigtools
-# 安全：仅返回 SDKAppID / region / endpoint / 测试 UserSig，不返回 SecretKey 明文
+# Security: only returns SDKAppID / region / endpoint / test UserSig; never exposes plaintext SecretKey
 # ---------------------------------------------------------------------------
 @api.get("/debug/usersig")
 def debug_usersig(user_id: str = "test_user_001") -> Dict[str, Any]:
@@ -240,10 +240,10 @@ def debug_usersig(user_id: str = "test_user_001") -> Dict[str, Any]:
         "user_sig_length": len(sig),
         "verify_url": "https://console.cloud.tencent.com/trtc/usersigtools",
         "hint": (
-            "把 sdk_app_id / test_user_id / test_user_sig 粘贴到 TRTC 控制台官方校验工具，"
-            "若工具显示 UserSig 校验通过 → SDKSecretKey 正确；"
-            "若工具显示校验失败 → 你填的 TRTC_SDK_SECRET_KEY 与该 SDKAppID 不匹配，"
-            "请重新到 TRTC 控制台核对 SDKSecretKey（注意：不是腾讯云 API SecretKey）。"
+            "Paste sdk_app_id / test_user_id / test_user_sig into the TRTC console official verification tool. "
+            "If the tool shows UserSig verification passed → SDKSecretKey is correct; "
+            "If the tool shows verification failed → the TRTC_SDK_SECRET_KEY you entered does not match this SDKAppID. "
+            "Please re-check the SDKSecretKey in the TRTC console (note: this is NOT the Tencent Cloud API SecretKey)."
         ),
     }
 
@@ -251,8 +251,9 @@ def debug_usersig(user_id: str = "test_user_001") -> Dict[str, Any]:
 app.include_router(api)
 
 # ---------------------------------------------------------------------------
-# 能力包路由挂载（可选；通过 _capability_loader 动态加载，能力包未安装则静默跳过）
-# 由 add-capability 注入；统一走 try_load_capability 以避免连字符 import 失败。
+# Capability route mounting (optional; dynamically loaded via _capability_loader, silently
+# skipped if the capability package is not installed).
+# Injected by add-capability; all use try_load_capability to avoid hyphenated import failures.
 # ---------------------------------------------------------------------------
 from ._capability_loader import try_load_capability as _try_load_capability  # noqa: E402
 
@@ -265,9 +266,9 @@ if _kb_router_mod is not None and hasattr(_kb_router_mod, "router"):
 
 
 # ---------------------------------------------------------------------------
-# Web Demo 静态页（最小验证页，不含业务）
-# 可通过 WEB_DEMO_DIR 环境变量指向自定义 Demo 目录（如路径 A 产物目录）
-# 未设置时默认使用 conversation-core 自带的 web-demo 自检页
+# Web Demo static pages (minimal verification page, no business content)
+# Can point to a custom demo directory (e.g. Path A artifact directory) via
+# the WEB_DEMO_DIR environment variable. Defaults to conversation-core's own web-demo self-check page.
 # ---------------------------------------------------------------------------
 _DEMO_DIR = Path(os.getenv("WEB_DEMO_DIR", str(_BASE_DIR / "web-demo")))
 if _DEMO_DIR.exists():
@@ -283,7 +284,7 @@ if _DEMO_DIR.exists():
 
 
 # ---------------------------------------------------------------------------
-# 入口
+# Entry point
 # ---------------------------------------------------------------------------
 def main() -> None:
     import uvicorn

@@ -1,36 +1,36 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-"""三把 Key 无参数验证脚本（Phase 3 阶段 5 新增）。
+"""Three-key credential-less validation script (Phase 3 Stage 5).
 
-设计目标
---------
-**AI 主导的 Key 配置流程的"原子工具"**：
-1. 由 AI 把用户粘贴的 Key 通过 ``write_to_file`` 写入 ``.env``
-2. 由 AI 调 ``python scripts/verify-credentials.py [--type tencent|trtc|llm]``
-3. 本脚本**只**从 .env / 环境变量读取，**不**接受任何 Key 作为命令行参数
-4. 输出**结构化 JSON** 到 stdout，AI 据此判断 ok / 失败并按 SKILL.md §7.5 应答
+Design Goals
+------------
+**The "atomic tool" for AI-driven key configuration flow**:
+1. The AI writes user-pasted keys into ``.env`` via ``write_to_file``
+2. The AI calls ``python scripts/verify-credentials.py [--type tencent|trtc|llm]``
+3. This script **only** reads from .env / environment variables; it does **not** accept any keys as CLI arguments
+4. Outputs **structured JSON** to stdout; the AI parses it to determine ok / failure and responds per SKILL.md §5.5
 
-输出格式（始终是合法 JSON）::
+Output format (always valid JSON)::
 
-    单项: {"ok": true,  "type": "tencent", "error": "",     "message": "...", "latency_ms": 320}
-    单项: {"ok": false, "type": "trtc",    "error": "E002", "message": "...", "latency_ms": 0}
-    全量: {"ok": true,  "type": "all", "items": [ ... ]}
+    Single: {"ok": true,  "type": "tencent", "error": "",     "message": "...", "latency_ms": 320}
+    Single: {"ok": false, "type": "trtc",    "error": "E002", "message": "...", "latency_ms": 0}
+    Batch:  {"ok": true,  "type": "all", "items": [ ... ]}
 
-退出码：``0`` 表示全部通过；非零表示有任意失败（便于 shell 判断）。
+Exit code: ``0`` means all passed; non-zero means at least one failure (for shell scripting).
 
-用法
-----
-    python3 scripts/verify-credentials.py                  # 验证全部三把
-    python3 scripts/verify-credentials.py --type tencent   # 仅腾讯云
-    python3 scripts/verify-credentials.py --type trtc      # 仅 TRTC
-    python3 scripts/verify-credentials.py --type llm       # 仅 LLM
-    python3 scripts/verify-credentials.py --no-deep        # TRTC 跳过 OpenAPI 深度校验
+Usage
+-----
+    python3 scripts/verify-credentials.py                  # validate all three
+    python3 scripts/verify-credentials.py --type tencent   # Tencent Cloud only
+    python3 scripts/verify-credentials.py --type trtc      # TRTC only
+    python3 scripts/verify-credentials.py --type llm       # LLM only
+    python3 scripts/verify-credentials.py --no-deep        # TRTC skip deep OpenAPI validation
 
-安全约束（红线）
-----------------
-- 严禁通过命令行参数传递任何 Key（无 --secret-id / --api-key 等参数）
-- 严禁在 stdout / stderr 中回显凭证原文
-- ``.env`` 由调用方在写入时自行设置权限 600（本脚本不再二次处理）
+Security Constraints (Red Lines)
+--------------------------------
+- Never pass keys via CLI arguments (no --secret-id / --api-key parameters)
+- Never echo credential plaintext to stdout / stderr
+- ``.env`` permissions (600) are set by the caller at write time (this script does not re-process)
 """
 from __future__ import annotations
 
@@ -40,8 +40,8 @@ import sys
 import warnings
 from pathlib import Path
 
-# 抑制第三方库（如 urllib3 / NotOpenSSLWarning）发到 stderr 的告警，
-# 保证 stdout 纯 JSON、stderr 静默——AI 解析时无干扰
+# Suppress warnings from third-party libraries (e.g., urllib3 / NotOpenSSLWarning) sent to stderr,
+# keeping stdout pure JSON and stderr silent — no noise for AI parsing
 warnings.filterwarnings("ignore")
 
 _HERE = Path(__file__).resolve().parent
@@ -61,23 +61,23 @@ def _print_json(data: dict) -> None:
 def main(argv=None) -> int:
     parser = argparse.ArgumentParser(
         prog="verify-credentials",
-        description="无参数验证三把 Key（仅从 .env 读取，输出结构化 JSON）",
+        description="Credential-less validation of three keys (reads from .env only, outputs structured JSON)",
     )
     parser.add_argument(
         "--type",
         choices=["tencent", "trtc", "llm", "all"],
         default="all",
-        help="只验证指定一把 Key；默认 all",
+        help="Validate a single key; default is all",
     )
     parser.add_argument(
         "--no-deep",
         action="store_true",
-        help="TRTC 跳过 OpenAPI 深度校验，仅做本地 UserSig 自洽",
+        help="Skip deep OpenAPI validation for TRTC; only local UserSig self-consistency check",
     )
     parser.add_argument(
         "--env-file",
         default="",
-        help="可选：指定 .env 路径（默认查找 capabilities/conversation-core/.env）",
+        help="Optional: specify .env path (default: capabilities/conversation-core/.env)",
     )
     args = parser.parse_args(argv)
 

@@ -1,6 +1,6 @@
-"""转人工意图检测：关键字强匹配 + 弱意图（带否定上下文识别）。
+"""Handoff intent detection: keyword strong matching + weak intent (with negative context recognition).
 
-从原 trigger.py 迁入。本模块**不依赖**任何 adapter 或全局状态，纯函数。
+Migrated from original trigger.py. This module does **not depend** on any adapter or global state; pure functions.
 """
 from __future__ import annotations
 
@@ -10,10 +10,10 @@ from typing import List
 
 
 _DEFAULT_TRIGGERS = [
-    "人工", "转人工", "找人工", "客服小姐姐", "客服小哥",
+    "agent", "help", "support",
     "real person", "talk to agent", "speak to a human", "human agent",
 ]
-_DEFAULT_INTENT = ["投诉", "complain", "manager", "无法解决", "解决不了"]
+_DEFAULT_INTENT = ["complain", "manager", "unsatisfied", "escalate"]
 
 
 def _csv_env(key: str, default: List[str]) -> List[str]:
@@ -24,7 +24,7 @@ def _csv_env(key: str, default: List[str]) -> List[str]:
 
 
 class IntentDetector:
-    """以正则方式判断输入文本是否表达"转人工"意图。"""
+    """Determine whether input text expresses a "handoff" intent using regex."""
 
     def __init__(
         self,
@@ -45,7 +45,7 @@ class IntentDetector:
             "|".join(re.escape(k) for k in self._intent), re.IGNORECASE
         )
         self._negative_re = re.compile(
-            r"\b(not|don't|do not|不|没有|不要|无需)\b", re.IGNORECASE
+            r"\b(not|don't|do not|no|never)\b", re.IGNORECASE
         )
 
     def is_handoff_intent(self, text: str) -> bool:
@@ -59,7 +59,7 @@ class IntentDetector:
 
 
 # ---------------------------------------------------------------------------
-# 默认单例（保持与旧 trigger.py 行为一致；测试可手动构造新实例覆盖）
+# Default singleton (keeps behavior consistent with old trigger.py; tests can manually construct new instances to override)
 # ---------------------------------------------------------------------------
 _default_detector: IntentDetector | None = None
 

@@ -1,12 +1,12 @@
 """human-handoff core models.
 
-定义统一的领域模型：
-- TicketStatusEnum  工单状态（与 business_contract.ticket.status_query.response.status 对齐）
-- Ticket            工单完整记录（adapter 之间的传输对象）
-- TicketStatus      轻量状态视图（status_query 返回）
-- OverallStatus     队列整体状态（看板用）
+Defines unified domain models:
+- TicketStatusEnum  Ticket status (aligned with business_contract.ticket.status_query.response.status)
+- Ticket            Complete ticket record (transport object between adapters)
+- TicketStatus      Lightweight status view (returned by status_query)
+- OverallStatus     Overall queue status (dashboard use)
 
-核心层不感知任何具体后端实现，所有 adapter 必须使用本模块的数据结构。
+The core layer does not know any specific backend implementation; all adapters must use this module's data structures.
 """
 from __future__ import annotations
 
@@ -18,14 +18,14 @@ from typing import Any, Dict, List, Optional
 
 
 class TicketStatusEnum(str, Enum):
-    """工单状态枚举。
+    """Ticket status enum.
 
-    业务语义对照：
-    - PENDING    用户已申请；尚未分配座席（与旧 HandoffState.WAITING 等价）
-    - PROCESSING 已分配座席，正在处理（与旧 HandoffState.CONNECTED 等价）
-    - CLOSED     座席已关闭工单
-    - CANCELED   用户主动取消
-    - TIMEOUT    超时无座席接通
+    Business semantics mapping:
+    - PENDING    User has applied; not yet assigned an agent (equivalent to old HandoffState.WAITING)
+    - PROCESSING Agent assigned, processing (equivalent to old HandoffState.CONNECTED)
+    - CLOSED     Agent closed ticket
+    - CANCELED   User actively canceled
+    - TIMEOUT    Timeout, no agent connected
     """
 
     PENDING = "pending"
@@ -35,7 +35,7 @@ class TicketStatusEnum(str, Enum):
     TIMEOUT = "timeout"
 
 
-# 与旧 API 兼容的状态名映射（HandoffState 时代）
+# Status name mapping for old API compatibility (HandoffState era)
 _LEGACY_STATE_MAP = {
     TicketStatusEnum.PENDING.value: "waiting",
     TicketStatusEnum.PROCESSING.value: "connected",
@@ -46,7 +46,7 @@ _LEGACY_STATE_MAP = {
 
 
 def to_legacy_state(status: str) -> str:
-    """把新版 TicketStatusEnum 值转回旧 API 暴露的 state 名。"""
+    """Convert new TicketStatusEnum value back to old API state name."""
     if not status:
         return "idle"
     return _LEGACY_STATE_MAP.get(status, status)
@@ -54,10 +54,10 @@ def to_legacy_state(status: str) -> str:
 
 @dataclass
 class Ticket:
-    """工单记录。adapter 间的传输对象。
+    """Ticket record. Transport object between adapters.
 
-    user_id 与 ticket_id 在 LocalQueue 实现下默认同值（沿用 session_id），
-    REST 实现则使用业务方返回的 ticket_id。
+    user_id and ticket_id default to the same value in LocalQueue implementation (using session_id),
+    REST implementation uses ticket_id returned by the business side.
     """
 
     ticket_id: str
@@ -70,7 +70,7 @@ class Ticket:
     eta_seconds: int = 0
     agent_id: Optional[str] = None
     transcript: List[str] = field(default_factory=list)
-    reason: str = ""                          # 触发原因摘要（兼容旧字段）
+    reason: str = ""                          # Trigger reason summary (compatible with old field)
     created_at: Optional[float] = None
     updated_at: Optional[float] = None
     closed_at: Optional[float] = None
@@ -97,12 +97,12 @@ class Ticket:
             "created_at": self.created_at,
             "updated_at": self.updated_at,
             "closed_at": self.closed_at,
-            # 建单时由 human-handoff 联动 session-summary 写入（未装能力则为 None）
+            # Written at ticket creation by human-handoff - session-summary linkage (None if capability not installed)
             "session_summary": self.extra.get("session_summary"),
         }
 
     def to_legacy_dict(self) -> dict:
-        """旧 REST API（/api/v1/handoff/*）返回的字段格式，保持 Web Demo 兼容。"""
+        """Field format returned by old REST API (/api/v1/handoff/*), keeps Web Demo compatibility."""
         return {
             "session_id": self.user_id,
             "state": to_legacy_state(self.status),
@@ -118,7 +118,7 @@ class Ticket:
 
 @dataclass
 class TicketStatus:
-    """对应 business_contract.ticket.status_query 的响应模型。"""
+    """Response model corresponding to business_contract.ticket.status_query."""
 
     ticket_id: str
     status: str

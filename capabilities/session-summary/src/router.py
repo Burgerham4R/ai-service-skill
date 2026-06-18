@@ -1,4 +1,4 @@
-"""session-summary FastAPI 子路由。"""
+"""session-summary FastAPI sub-router."""
 from __future__ import annotations
 
 import os
@@ -34,7 +34,7 @@ def finalize(session_id: str) -> dict:
     prefer_llm = os.getenv("SS_LLM_SUMMARY", "true").lower() == "true"
     summary = summarize(rec, prefer_llm=prefer_llm)
     rec = get_recorder().finalize(session_id, summary)
-    # 写回：按 SS_ADAPTER 选择 mock / local_json / default_rest（失败安全降级 mock）
+    # Write-back: select mock / local_json / default_rest by SS_ADAPTER (safe degradation to mock on failure)
     writeback = None
     try:
         from .adapters.factory import get_sink

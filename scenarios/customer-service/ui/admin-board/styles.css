@@ -1,14 +1,14 @@
 /* =====================================================================
- * 工单坐席看板 —— 仅引用 design tokens
- * 入口：scenarios/customer-service/ui/admin-board/index.html
- * 调用：/api/v1/handoff/admin/tickets/*
+ * Ticket Agent Board — Design tokens only
+ * Entry: scenarios/customer-service/ui/admin-board/index.html
+ * Calls: /api/v1/handoff/admin/tickets/*
  * ===================================================================== */
 
 *, *::before, *::after { box-sizing: border-box; }
 
-/* HTML hidden 属性必须真正隐藏元素：
-   .drawer{display:flex} 等类选择器优先级高于 UA 的 [hidden]{display:none}，
-   不加此条会导致 drawer.hidden=true 被 display:flex 覆盖 → 抽屉关不掉。 */
+/* HTML hidden attribute must truly hide elements:
+   Class selectors like .drawer{display:flex} have higher specificity than UA [hidden]{display:none},
+   without this rule drawer.hidden=true gets overridden by display:flex → drawer won't close. */
 [hidden] { display: none !important; }
 
 html, body {
@@ -74,7 +74,7 @@ a:hover { text-decoration: underline; }
 .icon-btn:hover { background: var(--color-bg-surface-strong); }
 .icon-btn:focus-visible { outline: 2px solid var(--color-brand-accent); outline-offset: 2px; }
 
-/* ---------- 顶部 ---------- */
+/* ---------- Top bar ---------- */
 .topbar {
   position: sticky;
   top: 0;
@@ -152,7 +152,7 @@ a:hover { text-decoration: underline; }
 }
 .auto-toggle input { accent-color: var(--color-brand-accent); }
 
-/* ---------- 主布局 ---------- */
+/* ---------- Main layout ---------- */
 .layout {
   max-width: 1280px;
   margin: 0 auto;
@@ -163,7 +163,7 @@ a:hover { text-decoration: underline; }
   align-items: start;
 }
 
-/* ---------- 左侧 rail ---------- */
+/* ---------- Left rail ---------- */
 .filter-rail {
   border: 1px solid var(--color-bg-border);
   border-radius: var(--radius-card);
@@ -333,7 +333,7 @@ a:hover { text-decoration: underline; }
   font-style: italic;
 }
 
-/* ---------- 右侧抽屉 ---------- */
+/* ---------- Right drawer ---------- */
 .drawer {
   position: fixed;
   top: 0;
@@ -426,7 +426,7 @@ a:hover { text-decoration: underline; }
 .toast[data-tone="error"] { color: var(--color-status-error); }
 .toast[data-tone="success"] { color: var(--color-status-success); }
 
-/* ---------- 会话纪要块（session-summary）---------- */
+/* ---------- Session summary block (session-summary) ---------- */
 .summary-block {
   margin-top: 16px;
   padding-top: 12px;
@@ -453,7 +453,7 @@ a:hover { text-decoration: underline; }
 }
 .summary-meta { font-size: 11px; color: var(--color-text-tertiary); margin: 8px 0 0; }
 
-/* ---------- 响应式 ---------- */
+/* ---------- Responsive ---------- */
 @media (max-width: 900px) {
   .layout { grid-template-columns: 1fr; }
   .drawer { width: 100vw; }

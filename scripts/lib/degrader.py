@@ -1,13 +1,13 @@
-"""三级降级策略决策机。
+"""Three-tier fallback decision engine.
 
-输入：技术栈检测结果 + 适配器执行结果。
-输出：降级级别（L1 / L2 / L3）+ 用户引导内容路径。
+Input: tech stack detection result + adapter execution result.
+Output: fallback level (L1 / L2 / L3) + user guidance content path.
 
-| 级别 | 触发条件                                  | Agent 行为                                |
-|:----:|:------------------------------------------|:------------------------------------------|
-| L1   | tech_stack 命中 adapter 且代码生成成功    | 直接写入用户项目                           |
-| L2   | tech_stack 命中但代码生成失败/有冲突      | 输出 INTEGRATION_GUIDE.md 模板 + 模板代码 |
-| L3   | tech_stack 未识别或不在支持列表           | 输出通用 REST API 文档 + SDK 包安装命令   |
+| Level | Trigger Condition                           | Agent Behavior                              |
+|:-----:|:--------------------------------------------|:--------------------------------------------|
+| L1    | tech_stack matches adapter + codegen OK     | Write directly into user project            |
+| L2    | tech_stack matches but codegen failed/conflict | Output INTEGRATION_GUIDE.md template + template code |
+| L3    | tech_stack not recognized or not supported  | Output generic REST API docs + SDK install commands |
 """
 from __future__ import annotations
 
@@ -86,8 +86,8 @@ def decide(
             adapter=adapter,
             artifacts=templates,
             remediation=(
-                "Agent 输出 INTEGRATION_GUIDE.md：包含模板代码 + 注入位置说明，"
-                "用户按文档手工完成集成"
+                "Agent outputs INTEGRATION_GUIDE.md: includes template code + injection position notes; "
+                "user completes integration manually following the docs"
             ),
         )
     # L3：未识别或无适配器
@@ -109,17 +109,17 @@ def decide(
         adapter=None,
         artifacts=artifacts,
         remediation=(
-            "Agent 输出通用 REST API 接入文档（基础地址 /api/v1）"
-            " + SDK 包安装命令，由集成方手动接入。"
+            "Agent outputs generic REST API integration docs (base URL /api/v1)"
+            " + SDK package install commands; integrator connects manually."
         ),
     )
 
 
 # ---------------------------------------------------------------------------
-# I/O 模态降级矩阵：4 通道独立开关 → 16 种组合，确保每种组合都有可用路径
+# I/O modality fallback matrix: 4 independent channel toggles → 16 combinations, ensuring a viable path for each
 # ---------------------------------------------------------------------------
 def channel_combinations_matrix() -> List[Dict]:
-    """返回 16 种通道组合的降级路径（供文档与测试使用）。"""
+    """Return the fallback paths for all 16 channel combinations (used for docs & testing)."""
     rows: List[Dict] = []
     channels = ["voice_input", "text_input", "voice_output", "text_output"]
     for mask in range(16):
@@ -127,7 +127,7 @@ def channel_combinations_matrix() -> List[Dict]:
         usable_in = state["voice_input"] or state["text_input"]
         usable_out = state["voice_output"] or state["text_output"]
         if not usable_in and not usable_out:
-            verdict = "silent_wait"  # 上层进入静默等待
+            verdict = "silent_wait"  # upper layer enters silent wait
         elif not usable_in:
             verdict = "output_only_broadcast"
         elif not usable_out:

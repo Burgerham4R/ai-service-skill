@@ -1,4 +1,4 @@
-"""manifest 解析 / 拓扑序 / 循环依赖 / 版本冲突 / 未知注入点 测试。"""
+"""Manifest parsing / topological order / circular dependency / version conflict / unknown injection point tests."""
 import os
 import sys
 import unittest
@@ -37,7 +37,7 @@ class ManifestResolverTests(unittest.TestCase):
         graph = mr.resolve([a, self.skeleton, b])
         self.assertEqual(graph.skeleton.name, "conversation-core")
         self.assertEqual(graph.order[0], "conversation-core")
-        # b 必须在 a 之后
+        # b must come after a
         self.assertGreater(graph.order.index("cap-b"), graph.order.index("cap-a"))
 
     def test_circular_dependency_detected(self):
@@ -80,7 +80,7 @@ class ManifestResolverTests(unittest.TestCase):
             mr.resolve([self.skeleton, s2])
 
     def test_real_project_capabilities_resolve(self):
-        """实际仓库中的 6 个能力包应能被正确解析。"""
+        """The 6 capabilities in the real repo should all resolve correctly."""
         manifests = mr.discover_manifests(_ROOT / "capabilities")
         self.assertGreaterEqual(len(manifests), 6)
         graph = mr.resolve(manifests)

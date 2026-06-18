@@ -1,11 +1,11 @@
 /* =====================================================================
- * 工单坐席看板 —— 前端逻辑
- * 后端契约：capabilities/human-handoff/manifest.yaml.endpoints
- *   GET  /api/v1/handoff/admin/tickets[?status=&limit=]   工单列表
- *   GET  /api/v1/handoff/admin/tickets/{ticket_id}        工单详情
- *   POST /api/v1/handoff/admin/tickets/{ticket_id}/status 状态更新
- *   GET  /api/v1/handoff/status                           整体队列状态
- *   POST /api/v1/handoff/request                          手工提交一条测试工单
+ * Ticket Agent Board — Frontend Logic
+ * Backend contract: capabilities/human-handoff/manifest.yaml.endpoints
+ *   GET  /api/v1/handoff/admin/tickets[?status=&limit=]     Ticket list
+ *   GET  /api/v1/handoff/admin/tickets/{ticket_id}          Ticket detail
+ *   POST /api/v1/handoff/admin/tickets/{ticket_id}/status   Status update
+ *   GET  /api/v1/handoff/status                             Overall queue status
+ *   POST /api/v1/handoff/request                            Manually submit a test ticket
  * ===================================================================== */
 
 (function () {
@@ -47,10 +47,10 @@
     urgent: "Urgent",
   };
 
-  /* ---------- 工具函数 ---------- */
+  /* ---------- Utilities ---------- */
   function fmtTs(ts) {
     if (!ts && ts !== 0) return "--";
-    const ms = ts < 1e12 ? ts * 1000 : ts;          // 兼容 epoch (秒/毫秒)
+    const ms = ts < 1e12 ? ts * 1000 : ts;          // compatible with epoch (seconds/milliseconds)
     const d = new Date(ms);
     if (Number.isNaN(d.getTime())) return "--";
     const pad = (n) => String(n).padStart(2, "0");
@@ -81,7 +81,7 @@
     el._timer = setTimeout(() => el.classList.remove("is-visible"), 2400);
   }
 
-  /* ---------- 网络 ---------- */
+  /* ---------- Network ---------- */
   async function api(path, opts) {
     const init = Object.assign({ credentials: "same-origin" }, opts || {});
     if (init.body && typeof init.body !== "string") {
@@ -128,7 +128,7 @@
     }
   }
 
-  /* ---------- 渲染 ---------- */
+  /* ---------- Rendering ---------- */
   function renderList() {
     if (!state.list.length) {
       tbody.innerHTML = '<tr class="empty-row"><td colspan="7">No tickets yet. Click "Insert test ticket" on the left to create one.</td></tr>';
@@ -280,7 +280,7 @@
       const resp = await fetch(`/api/v1/summary/${encodeURIComponent(sessionId)}`, { credentials: "same-origin" });
       if (resp.status === 404) {
         const blk = document.getElementById("summary-block");
-        if (blk) blk.hidden = true;     // 该会话没有纪要记录
+        if (blk) blk.hidden = true;     // this session has no summary record
         return;
       }
       if (!resp.ok) { box.textContent = "Failed to load summary."; return; }
@@ -314,7 +314,7 @@
     const t = state.list.find((x) => x.ticket_id === ticketId);
     if (t) renderDetail(t);
     else {
-      // 单独拉一次详情（防止列表分页拿不到）
+      // Fetch single detail (fallback when list pagination misses it)
       api(`/api/v1/handoff/admin/tickets/${encodeURIComponent(ticketId)}`)
         .then((b) => renderDetail(b.data || b))
         .catch(() => renderDetail(null));
@@ -331,7 +331,7 @@
   }
   btnCloseDrawer.addEventListener("click", closeDrawer);
 
-  /* ---------- 状态切换 ---------- */
+  /* ---------- Status transitions ---------- */
   async function onActionClick(ticketId, status) {
     const body = { status };
     if (status === "processing") body.agent_id = "agent_demo_001";
@@ -351,7 +351,7 @@
     }
   }
 
-  /* ---------- 筛选 ---------- */
+  /* ---------- Filters ---------- */
   filterList.addEventListener("click", async (ev) => {
     const btn = ev.target.closest(".filter-item");
     if (!btn) return;
@@ -364,7 +364,7 @@
     await fetchList();
   });
 
-  /* ---------- 刷新 ---------- */
+  /* ---------- Refresh ---------- */
   async function refreshAll() {
     await Promise.all([fetchOverall(), fetchList()]);
   }
@@ -381,7 +381,7 @@
   }
   chkAuto.addEventListener("change", setupAutoRefresh);
 
-  /* ---------- 测试工单（仅 dev） ---------- */
+  /* ---------- Test ticket (dev only) ---------- */
   btnSeed.addEventListener("click", async () => {
     const fakeId = "demo_seed_" + Math.random().toString(36).slice(2, 8);
     try {
@@ -396,7 +396,7 @@
     await refreshAll();
   });
 
-  /* ---------- 启动 ---------- */
+  /* ---------- Init ---------- */
   refreshAll();
   setupAutoRefresh();
 })();

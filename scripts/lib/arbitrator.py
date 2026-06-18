@@ -1,16 +1,16 @@
-"""α/β 双轨制工具调用仲裁。
+"""α/β dual-track tool-call arbitration.
 
-| 轨 | 实现   | 触发                              |
-|:--:|:-------|:----------------------------------|
-| α  | 本地函数 | 默认优先（低延迟、零网络开销）     |
-| β  | 远程 API | α 不可用（未注册 / 失败 / 超时）时 |
+| Track | Implementation | Triggered When                           |
+|:-----:|:---------------|:-----------------------------------------|
+| α     | Local function | Default priority (low latency, zero network overhead) |
+| β     | Remote API     | α unavailable (not registered / failed / timed out)   |
 
-仲裁规则（manifest.tool_calling 节点）：
+Arbitration rules (manifest.tool_calling node):
     priority: alpha | beta | manifest_order
     timeout_ms_alpha / timeout_ms_beta
     retry_alpha / retry_beta
 
-风险 P1 缓解：双轨同时存在时按 priority 字段决策；α 不可用自动降级。
+Risk P1 mitigation: when both tracks exist, decide by the priority field; auto-fallback when α is unavailable.
 """
 from __future__ import annotations
 

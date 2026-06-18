@@ -1,9 +1,9 @@
-"""分词 + 评分工具：从原 retriever.py 迁入。
+"""Tokenization + scoring utilities: migrated from original retriever.py.
 
-不引入任何外部依赖，纯 Python：
-- 中文按字 2-gram 切分
-- 英文按 word 切分
-- TF-IDF 评分（关键词加权 3 倍）
+No external dependencies, pure Python:
+- Chinese: character bigram splitting
+- English: word-level splitting
+- TF-IDF scoring (keywords weighted 3x)
 """
 from __future__ import annotations
 
@@ -19,7 +19,7 @@ _CN_RE = re.compile(r"[\u4e00-\u9fff]+")
 
 
 def tokenize(text: str) -> List[str]:
-    """混合中英文分词。"""
+    """Mixed Chinese/English tokenization."""
     if not text:
         return []
     text = text.lower()
@@ -34,7 +34,7 @@ def tokenize(text: str) -> List[str]:
 
 
 def doc_tokens(entry: FaqEntry) -> List[str]:
-    """生成单条目用于评分的 token 列表（关键词加权 3 倍）。"""
+    """Generate token list for scoring a single entry (keywords weighted 3x)."""
     toks = tokenize(entry.question) + tokenize(entry.answer)
     for kw in entry.keywords:
         toks.extend(tokenize(kw) * 3)
@@ -42,7 +42,7 @@ def doc_tokens(entry: FaqEntry) -> List[str]:
 
 
 def build_df(entries: Iterable[FaqEntry]) -> Dict[str, int]:
-    """构建文档频率表。"""
+    """Build document frequency table."""
     df: Dict[str, int] = {}
     for e in entries:
         for t in set(doc_tokens(e)):
@@ -57,7 +57,7 @@ def tfidf_score(
     df: Dict[str, int],
     n_docs: int,
 ) -> float:
-    """TF-IDF 评分（归一化到 [0, 1]）。"""
+    """TF-IDF score (normalized to [0, 1])."""
     d_tokens = doc_tokens(entry)
     if not d_tokens:
         return 0.0

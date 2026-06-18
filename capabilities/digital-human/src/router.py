@@ -1,8 +1,8 @@
-"""digital-human FastAPI 占位路由。
+"""digital-human FastAPI placeholder router.
 
-接口契约固定：
-- GET  /status    返回占位状态 + 未来计划
-- POST /render    返回 501 Not Implemented，提示由后续迭代提供
+Interface contract fixed:
+- GET  /status    Returns placeholder status + roadmap
+- POST /render    Returns 501 Not Implemented, deferred to future iterations
 """
 from __future__ import annotations
 
@@ -24,8 +24,8 @@ def status() -> dict:
             "expression_provider": os.getenv("DH_EXPRESSION_PROVIDER", "internal-rule"),
             "phase": "placeholder",
             "roadmap": [
-                "Phase 3+: 接入第三方渲染 SDK（avatar / lipsync / expression）",
-                "支持 WebRTC datachannel 推送驱动数据",
+                "Phase 3+: Integrate third-party rendering SDK (avatar / lipsync / expression)",
+                "Support WebRTC datachannel driver data push",
             ],
         },
     }

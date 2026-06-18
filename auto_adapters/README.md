@@ -1,40 +1,40 @@
-# auto_adapters - 技术栈解耦适配器组件库
+# auto_adapters - Tech Stack Decoupling Adapter Component Library
 
-> 由 Agent 在集成阶段读取，根据 `stack_detector` 识别到的技术栈，
-> 选择对应 adapter 渲染模板代码并注入用户项目。
+> Read by the Agent during the integration phase. Based on the tech stack identified by `stack_detector`,
+> selects the corresponding adapter, renders template code, and injects it into the user's project.
 
-## 适配器索引
+## Adapter Index
 
-| 适配器 | 命中技术栈 | 注入产物 | 默认目标 |
+| Adapter | Matching Tech Stack | Injected Artifact | Default Target |
 |:---|:---|:---|:---|
-| `frontend-spa` | `react` / `vue` / `angular` / `next` | `VoiceAgent.{tsx,vue,ts}` 组件 | `src/components/` |
-| `node-backend` | `express` / `koa` / `fastify` | 反向代理中间件 | `routes/voice-agent.js` |
-| `java-backend` | `spring-boot` / `quarkus` | `Filter` 或 `Quarkus Filter` | `src/main/java/.../VoiceAgentFilter.java` |
-| `python-backend` | `flask` / `fastapi` / `django` | 装饰器 / 子路由 | `voice_agent_proxy.py` |
+| `frontend-spa` | `react` / `vue` / `angular` / `next` | `VoiceAgent.{tsx,vue,ts}` component | `src/components/` |
+| `node-backend` | `express` / `koa` / `fastify` | Reverse proxy middleware | `routes/voice-agent.js` |
+| `java-backend` | `spring-boot` / `quarkus` | `Filter` or `Quarkus Filter` | `src/main/java/.../VoiceAgentFilter.java` |
+| `python-backend` | `flask` / `fastapi` / `django` | Decorator / sub-router | `voice_agent_proxy.py` |
 
-## 模板渲染变量
+## Template Rendering Variables
 
-所有 `.tpl` 文件统一使用 `${VAR}` 占位（避免与 JS / Python 的 `{{}}` 冲突）：
+All `.tpl` files use `${VAR}` placeholders (to avoid conflicts with JS / Python `{{}}`):
 
-| 变量 | 默认 | 说明 |
+| Variable | Default | Description |
 |:---|:---|:---|
-| `${SKELETON_BASE_URL}` | `http://localhost:3000` | conversation-core 进程地址 |
-| `${API_PREFIX}` | `/api/v1` | 骨架 REST 前缀 |
-| `${COMPONENT_NAME}` | `VoiceAgent` | 前端组件名 |
-| `${ROUTE_PREFIX}` | `/voice-agent` | 后端代理路由前缀 |
+| `${SKELETON_BASE_URL}` | `http://localhost:3000` | conversation-core process address |
+| `${API_PREFIX}` | `/api/v1` | Skeleton REST prefix |
+| `${COMPONENT_NAME}` | `VoiceAgent` | Frontend component name |
+| `${ROUTE_PREFIX}` | `/voice-agent` | Backend proxy route prefix |
 
-## 三级降级链路
+## Three-Level Degradation Chain
 
 ```
-L1 全自动: stack_detector.primary 命中 → adapter.render() → 写入用户项目
+L1 Full Auto:  stack_detector.primary matched → adapter.render() → write to user project
        │
-       │  失败（语法冲突 / 路径冲突）
+       │  Failed (syntax conflict / path conflict)
        ▼
-L2 半自动: 输出 INTEGRATION_GUIDE.md（基于 integration_templates/generic-*.md）
+L2 Semi-Auto:  Output INTEGRATION_GUIDE.md (based on integration_templates/generic-*.md)
        │
-       │  stack_detector.primary 为 None
+       │  stack_detector.primary is None
        ▼
-L3 手动 API: 输出 integration_templates/generic-rest-api.md
+L3 Manual API: Output integration_templates/generic-rest-api.md
 ```
 
-详见 `scripts/lib/degrader.py` 与 `scripts/add-capability.py`。
+See `scripts/lib/degrader.py` and `scripts/add-capability.py` for details.

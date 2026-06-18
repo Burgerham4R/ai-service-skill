@@ -1,77 +1,77 @@
-# human-handoff 接口适配 SOP
+# human-handoff Interface Adaptation SOP
 
-> 当用户已有的工单 / 客服调度系统接口与本能力包默认契约不一致时，按本文档分场景操作。
-> 推荐统一通过 `python scripts/contract-adapt.py human-handoff` 自动生成，本文档为手工兜底。
+> When the user's existing ticket / agent dispatch system interface differs from this capability's default contract, follow this document for scenario-specific operations.
+> Recommended: use `python scripts/contract-adapt.py human-handoff` for automated generation; this document is the manual fallback.
 
 ---
 
-## 1. 默认契约速览
+## 1. Default Contract Overview
 
-本能力包**调用**用户工单系统的接口（outbound）：
+This capability **calls** the user's ticket system interfaces (outbound):
 
-| 契约名 | 方法 | 路径 | 用途 |
+| Contract | Method | Path | Purpose |
 |---|---|---|---|
-| `ticket.create`        | POST | `/tickets`                          | 创建工单 |
-| `ticket.status_query`  | GET  | `/tickets/{ticket_id}`              | 查工单状态 |
-| `ticket.cancel`        | POST | `/tickets/{ticket_id}/cancel`       | 取消工单 |
-| `ticket.status_callback` | POST | `/api/v1/handoff/callback/ticket-status` | 业务方回调（inbound） |
+| `ticket.create`        | POST | `/tickets`                          | Create ticket |
+| `ticket.status_query`  | GET  | `/tickets/{ticket_id}`              | Query ticket status |
+| `ticket.cancel`        | POST | `/tickets/{ticket_id}/cancel`       | Cancel ticket |
+| `ticket.status_callback` | POST | `/api/v1/handoff/callback/ticket-status` | Business callback (inbound) |
 
-完整字段定义见 `manifest.yaml` 的 `business_contract.external_apis`。
+Full field definitions in `manifest.yaml` `business_contract.external_apis`.
 
 ---
 
-## 2. 三层防御机制
+## 2. Three-Layer Defense Mechanism
 
-| 层级 | 落点 | 适用场景 |
+| Layer | Artifact Location | Applicable Scenario |
 |---|---|---|
-| **L1 字段映射** | 仅字段名 / 简单类型差异 | 90% 的常见情况 |
-| **L2 适配子类** | 认证、传输头、错误码、URL 模板差异 | 鉴权机制不同 / 路径/路由风格不同 |
-| **L3 完整自定义实现** | 协议级差异（webhook / MQ / gRPC） | 非 REST 协议 |
+| **L1 Field Mapping** | Field name / simple type differences only | 90% of common cases |
+| **L2 Adapter Subclass** | Auth, transport headers, error codes, URL template differences | Different auth mechanism / path/routing style |
+| **L3 Full Custom Implementation** | Protocol-level differences (webhook / MQ / gRPC) | Non-REST protocols |
 
-三层均落到 `capabilities/human-handoff/src/adapters/user_custom.py`，并通过 `HH_ADAPTER=user_custom` 启用。
+All three layers land in `capabilities/human-handoff/src/adapters/user_custom.py` and are enabled via `HH_ADAPTER=user_custom`.
 
 ---
 
-## 3. L1 字段映射（最常见）
+## 3. L1 Field Mapping (Most Common)
 
-### 3.1 适用判定
+### 3.1 Applicability
 
-- 用户接口仍是 REST + JSON
-- 仅字段名 / 字段路径不同（在 `adapter_slots` 范围内）
-- 字段类型一致（string ↔ string，int ↔ int）
+- User interface is still REST + JSON
+- Only field name / field path differences (within `adapter_slots` scope)
+- Field types are consistent (string ↔ string, int ↔ int)
 
-### 3.2 操作步骤
+### 3.2 Steps
 
-**Step 1**：贴出用户的 curl 或 OpenAPI
+**Step 1**: Paste the user's curl or OpenAPI
 
 ```bash
-# 用户的工单创建接口
+# User's ticket creation interface
 curl -X POST https://crm.example.com/api/v2/work_orders \
   -H 'X-Auth-Token: xxx' \
   -d '{
     "customer_id": "u001",
-    "title": "退款问题",
+    "title": "Refund issue",
     "level": "P2",
     "messages": ["..."]
   }'
-# 响应: { "id": "WO123", "rank": 5, "wait_estimate": 150 }
+# Response: { "id": "WO123", "rank": 5, "wait_estimate": 150 }
 ```
 
-**Step 2**：写映射表 `capabilities/human-handoff/src/adapters/user_custom_mapping.yaml`
+**Step 2**: Write mapping file `capabilities/human-handoff/src/adapters/user_custom_mapping.yaml`
 
 ```yaml
-# 字段路径映射：左 = 默认契约字段，右 = 用户实际字段
+# Field path mapping: left = default contract field, right = user's actual field
 ticket.create:
   request:
     user_id:     customer_id
     subject:     title
-    priority:    level                  # 值映射见下
+    priority:    level                  # Value mapping below
     transcript:  messages
   response:
     ticket_id:       id
     queue_position:  rank
     eta_seconds:     wait_estimate
-  # 枚举值映射
+  # Enum value mapping
   enum_map:
     request.priority:
       low:    P3
@@ -93,7 +93,7 @@ ticket.status_query:
       canceled:   cancelled
 ```
 
-**Step 3**：生成 adapter（通过工具）
+**Step 3**: Generate adapter (via tool)
 
 ```bash
 python scripts/contract-adapt.py human-handoff \
@@ -102,27 +102,27 @@ python scripts/contract-adapt.py human-handoff \
   --mapping capabilities/human-handoff/src/adapters/user_custom_mapping.yaml
 ```
 
-工具会按映射生成 `user_custom.py`，自动继承 `DefaultRestHandoffClient` 并覆写字段映射逻辑。
+The tool generates `user_custom.py` based on the mapping, automatically inheriting `DefaultRestHandoffClient` and overriding field mapping logic.
 
-**Step 4**：启用
+**Step 4**: Enable
 
 ```bash
 export HH_ADAPTER=user_custom
 export HH_REST_BASE_URL=https://crm.example.com
-export HH_REST_TOKEN=<your-token>     # 可选；无 token 时清空
+export HH_REST_TOKEN=<your-token>     # Optional; leave empty if no token
 ```
 
 ---
 
-## 4. L2 适配子类（认证 / 路径风格差异）
+## 4. L2 Adapter Subclass (Auth / Path Style Differences)
 
-### 4.1 适用判定
+### 4.1 Applicability
 
-- 鉴权方式非 Bearer（如 `X-Auth-Token`、`HMAC-SHA256` 签名、双 Token）
-- 路径模板不同（如 `/tickets/{id}` vs `/work-orders/by-id/{id}`）
-- 错误码不是 HTTP 标准（如返回 200 但 body 中 `code != 0`）
+- Auth method is not Bearer (e.g. `X-Auth-Token`, `HMAC-SHA256` signature, dual token)
+- Different path templates (e.g. `/tickets/{id}` vs `/work-orders/by-id/{id}`)
+- Error codes are not HTTP standard (e.g. returns 200 but body has `code != 0`)
 
-### 4.2 模板代码
+### 4.2 Template Code
 
 ```python
 # capabilities/human-handoff/src/adapters/user_custom.py
@@ -133,13 +133,13 @@ from .default_rest import DefaultRestHandoffClient
 
 
 class UserCustomHandoffClient(DefaultRestHandoffClient):
-    """用户工单系统适配器（L2）。"""
+    """User ticket system adapter (L2)."""
 
     def _headers(self) -> dict:
-        # 覆写鉴权方式
+        # Override auth method
         h = {"Content-Type": "application/json"}
         if self._token:
-            h["X-Auth-Token"] = self._token        # 不是 Bearer
+            h["X-Auth-Token"] = self._token        # Not Bearer
         return h
 
     def create_ticket(
@@ -151,7 +151,7 @@ class UserCustomHandoffClient(DefaultRestHandoffClient):
         priority: str = "normal",
         transcript: Optional[List[str]] = None,
     ) -> Ticket:
-        # TODO 字段重映射
+        # TODO Field remapping
         payload = {
             "customer_id": user_id,
             "title": subject,
@@ -171,11 +171,11 @@ class UserCustomHandoffClient(DefaultRestHandoffClient):
         )
 
     def query_status(self, ticket_id: str) -> Optional[TicketStatus]:
-        # TODO 路径模板重映射
+        # TODO Path template remapping
         data = self._get(f"/api/v2/work_orders/by-id/{ticket_id}", optional=True)
         if data is None:
             return None
-        # TODO 状态枚举重映射
+        # TODO Status enum remapping
         status_map = {"queued": "pending", "in_progress": "processing", "done": "closed"}
         return TicketStatus(
             ticket_id=str(data["id"]),
@@ -196,7 +196,7 @@ def from_env() -> Optional["UserCustomHandoffClient"]:
     )
 ```
 
-### 4.3 启用
+### 4.3 Enable
 
 ```bash
 export HH_ADAPTER=user_custom
@@ -206,16 +206,16 @@ export HH_REST_TOKEN=<your-token>
 
 ---
 
-## 5. L3 完整自定义（协议差异）
+## 5. L3 Full Custom (Protocol Differences)
 
-### 5.1 适用判定
+### 5.1 Applicability
 
-- 业务方使用 webhook（你方推消息过去，业务方再异步回调）
-- 业务方使用消息队列（Kafka / RocketMQ / RabbitMQ）
-- 业务方使用 gRPC / gRPC-Web
-- 用户体系完全自研，不存在"通用工单接口"概念
+- Business side uses webhooks (you push messages; business side async callbacks)
+- Business side uses message queues (Kafka / RocketMQ / RabbitMQ)
+- Business side uses gRPC / gRPC-Web
+- User system is fully custom; no "generic ticket interface" concept
 
-### 5.2 模板代码
+### 5.2 Template Code
 
 ```python
 # capabilities/human-handoff/src/adapters/user_custom.py
@@ -226,16 +226,16 @@ from ..ports.handoff_client import HandoffClient
 
 
 class UserCustomHandoffClient(HandoffClient):
-    """用户自研协议适配器（L3：直接实现 HandoffClient）。"""
+    """User custom protocol adapter (L3: directly implements HandoffClient)."""
 
     def __init__(self, **kwargs):
-        # TODO 初始化你的客户端：Kafka producer / gRPC channel / webhook poster 等
+        # TODO Initialize your client: Kafka producer / gRPC channel / webhook poster etc.
         ...
 
     def create_ticket(self, *, user_id, subject="", description="",
                       priority="normal", transcript=None) -> Ticket:
-        # TODO 用你自己的协议发送创建工单消息
-        # 例：self._kafka.send("ticket.create", {...})
+        # TODO Send ticket creation message using your own protocol
+        # e.g.: self._kafka.send("ticket.create", {...})
         ticket_id = Ticket.new_id()
         return Ticket(
             ticket_id=ticket_id,
@@ -249,7 +249,7 @@ class UserCustomHandoffClient(HandoffClient):
         )
 
     def query_status(self, ticket_id: str) -> Optional[TicketStatus]:
-        # TODO 从你的存储 / API 查询状态
+        # TODO Query status from your storage / API
         ...
 
     def cancel_ticket(self, ticket_id: str, reason: str = "") -> Optional[Ticket]:
@@ -262,7 +262,7 @@ class UserCustomHandoffClient(HandoffClient):
         )
 
     def list_tickets(self, *, limit=50, status=None) -> List[Ticket]:
-        # 看板可用；远程后端如不支持枚举可返回空
+        # Dashboard may use this; return empty if remote backend doesn't support enumeration
         return []
 
 
@@ -274,11 +274,11 @@ def from_env():
 
 ---
 
-## 6. inbound 回调对接（`ticket.status_callback`）
+## 6. Inbound Callback Integration (`ticket.status_callback`)
 
-如果用户工单系统支持主动回调，建议启用 inbound 模式：
+If the user's ticket system supports proactive callbacks, enabling inbound mode is recommended:
 
-### 6.1 我方暴露的回调端点
+### 6.1 Our Exposed Callback Endpoint
 
 ```
 POST /api/v1/handoff/callback/ticket-status
@@ -290,16 +290,16 @@ Content-Type: application/json
 }
 ```
 
-返回 `{"code": 0, "message": "ok"}`。
+Returns `{"code": 0, "message": "ok"}`.
 
-> **注意**：本期 router.py **未实现**该 inbound 端点；使用 inbound 模式需在 user_custom.py 注册 FastAPI route 并自行实现，或在 Phase 4 由 contract-adapt.py 自动生成。
+> **Note**: This release's router.py has **not implemented** this inbound endpoint; using inbound mode requires registering a FastAPI route in user_custom.py and implementing it yourself, or wait for Phase 4 auto-generation by contract-adapt.py.
 
-### 6.2 入站字段映射（用户回调字段名不同）
+### 6.2 Inbound Field Mapping (different callback field names)
 
-如果用户系统回调时字段名为 `id` / `state` / `operator`，需在 user_custom.py 中加入入站映射：
+If the user system's callback uses field names like `id` / `state` / `operator`, add inbound mapping in user_custom.py:
 
 ```python
-# 在 router 注册回调端点后调用本方法转换 payload
+# Register the callback endpoint in the router and call this method to convert the payload
 def _map_inbound(payload: dict) -> dict:
     return {
         "ticket_id": payload.get("id") or payload.get("ticket_id"),
@@ -312,16 +312,16 @@ def _map_inbound(payload: dict) -> dict:
 
 ---
 
-## 7. 切换 / 验证
+## 7. Switch / Verify
 
-### 7.1 启用 user_custom
+### 7.1 Enable user_custom
 
 ```bash
 export HH_ADAPTER=user_custom
-# 重启服务后生效
+# Takes effect after service restart
 ```
 
-### 7.2 单元自检
+### 7.2 Unit Self-Check
 
 ```bash
 python -c "
@@ -334,20 +334,20 @@ print('queried:', c.query_status(t.ticket_id))
 "
 ```
 
-### 7.3 端到端
+### 7.3 End-to-End
 
 ```bash
 curl -X POST http://localhost:3000/api/v1/handoff/request \
   -H 'Content-Type: application/json' \
-  -d '{"session_id":"u_test","reason":"我要投诉"}'
+  -d '{"session_id":"u_test","reason":"I want to complain"}'
 ```
 
 ---
 
-## 8. 安全清单
+## 8. Security Checklist
 
-- [ ] `HH_REST_BASE_URL` 必须使用 https://（localhost 例外）
-- [ ] 默认拒绝私网地址（9.* / 10.* / 172.16-31.* / 192.168.* / 169.254.*）
-- [ ] 鉴权 token 仅来自环境变量，**禁止**硬编码到 user_custom.py
-- [ ] 远程异常不打印响应体（可能含 PII）
-- [ ] 日志中 `Authorization` / `X-Auth-Token` 头自动脱敏（由骨架 `log_redaction` 负责）
+- [ ] `HH_REST_BASE_URL` must use https:// (localhost excepted)
+- [ ] Default reject private network addresses (9.* / 10.* / 172.16-31.* / 192.168.* / 169.254.*)
+- [ ] Auth token only from environment variables — **no hardcoding** in user_custom.py
+- [ ] Remote exceptions do not print response bodies (may contain PII)
+- [ ] `Authorization` / `X-Auth-Token` headers auto-redacted in logs (handled by skeleton `log_redaction`)

@@ -1,4 +1,4 @@
-"""session-summary 写回适配层。"""
+"""session-summary write-back adapter layer."""
 from .base import SummarySink
 from .factory import get_sink
 

@@ -1,37 +1,37 @@
 [
   {
     "id": "faq_refund",
-    "question": "怎么申请退款？",
-    "answer": "进入「我的订单」选择需要退款的商品，点击「申请退款」并填写原因。审核通过后款项 1-3 个工作日原路返回；逾期未到账请联系人工客服核实。",
-    "keywords": ["退款", "申请退款", "退货", "refund", "money back"],
+    "question": "How do I request a refund?",
+    "answer": "Go to \"My Orders\", select the item you want to refund, click \"Request Refund\" and fill in the reason. Once approved, the refund will be returned to your original payment method within 1-3 business days. If it hasn't arrived by the due date, contact a human agent for verification.",
+    "keywords": ["refund", "request refund", "return", "money back"],
     "source": "scenario_default"
   },
   {
     "id": "faq_logistics",
-    "question": "物流多久能送到？",
-    "answer": "标准件 48 小时内发货；全国主要城市 3-5 天送达，偏远地区 5-7 天。可在「我的订单」查看实时物流轨迹；如超时可在订单详情页发起催单。",
-    "keywords": ["物流", "发货", "快递", "送货", "shipping", "delivery"],
+    "question": "How long does shipping take?",
+    "answer": "Standard items ship within 48 hours. Delivery to major cities takes 3-5 days; remote areas take 5-7 days. You can track your order in real-time under \"My Orders\". If it exceeds the estimated time, you can request expedited handling on the order details page.",
+    "keywords": ["logistics", "shipping", "delivery", "tracking"],
     "source": "scenario_default"
   },
   {
     "id": "faq_invoice",
-    "question": "如何开发票？",
-    "answer": "下单时勾选「需要发票」，填写抬头与税号；已下单的可在「我的订单」点击「申请发票」补开。电子发票 24 小时内发送至预留邮箱，纸质发票 5-7 个工作日邮寄到付。",
-    "keywords": ["发票", "开票", "电子发票", "invoice"],
+    "question": "How do I get an invoice?",
+    "answer": "Check \"Request Invoice\" at checkout, and fill in the billing title and tax ID. For already-placed orders, go to \"My Orders\" and click \"Request Invoice\" to issue a supplementary invoice. Electronic invoices are sent to your registered email within 24 hours; paper invoices are mailed via collect-on-delivery within 5-7 business days.",
+    "keywords": ["invoice", "billing", "e-invoice", "tax"],
     "source": "scenario_default"
   },
   {
     "id": "faq_size",
-    "question": "尺码不合适怎么办？",
-    "answer": "支持 7 天无理由换码，运费由我方承担。请在「我的订单」点击「换码」按指引发货；同款缺货时可申请退款重新下单。",
-    "keywords": ["尺码", "换码", "换货", "不合身", "size"],
+    "question": "What if the size doesn't fit?",
+    "answer": "Free size exchange within 7 days, with shipping covered by us. Go to \"My Orders\", click \"Exchange Size\", and follow the instructions to ship the item back. If the same model is out of stock, you can request a refund and place a new order.",
+    "keywords": ["size", "exchange", "doesn't fit", "swap"],
     "source": "scenario_default"
   },
   {
     "id": "faq_after_sale",
-    "question": "售后保修期是多久？",
-    "answer": "全场商品提供 1 年质保；电子类产品 30 天内可换新，30 天后由品牌方按官方政策处理。需要保修时，请准备订单号与故障描述，可由 AI 客服直接帮您建工单。",
-    "keywords": ["保修", "售后", "质保", "warranty", "维修"],
+    "question": "How long is the warranty?",
+    "answer": "All products come with a 1-year warranty. Electronics are eligible for replacement within 30 days; after 30 days, the manufacturer handles it per official policy. To request warranty service, have your order number and a description of the issue ready — the AI agent can create a ticket for you directly.",
+    "keywords": ["warranty", "after-sale", "repair", "guarantee"],
     "source": "scenario_default"
   }
 ]

@@ -1,34 +1,35 @@
 /* =====================================================================
- * agent-link.js — 共享的 Conversational AI 接通核心
+ * agent-link.js — Shared Conversational AI Connection Core
  *
- * 把 voice-customer-service 已验证的「TRTC + conversation-core agent」通路
- * 抽成一个可复用、与具体 UI 解耦的核心，供浮窗 / 全屏 / 语音三种壳复用，
- * 避免各 UI 各写一份 TRTC 逻辑导致再次漂移。
+ * Extracts the proven "TRTC + conversation-core agent" pipeline from
+ * voice-customer-service into a reusable core that is decoupled from any
+ * specific UI. This allows the widget / fullscreen / voice shells to share
+ * the same connection logic and avoid drift between implementations.
  *
- * 后端契约（conversation-core 骨架，勿改）：
- *   GET  /api/v1/health                三盏 LED 自检
+ * Backend contract (conversation-core skeleton — do not modify):
+ *   GET  /api/v1/health                Three-LED self-check
  *   POST /api/v1/get_config            session_id / sdk_app_id / room_id / user_sig / agent_user_id
- *   POST /api/v1/agent/start           在 TRTC 房间内拉起 AI bot
- *   POST /api/v1/agent/stop            停止
+ *   POST /api/v1/agent/start           Launch the AI bot inside the TRTC room
+ *   POST /api/v1/agent/stop            Stop
  *   TRTC Web SDK v5: enterRoom / startLocalAudio / sendCustomMessage
- *   client → bot:  cmdId=2, type=20000 文本注入, type=20001 打断
- *   bot → client:  type=10000 字幕(payload.text/end/roundid), type=10001 状态
+ *   client → bot:  cmdId=2, type=20000 text injection, type=20001 interrupt
+ *   bot → client:  type=10000 subtitle (payload.text/end/roundid), type=10001 state
  *
- * 用法：
+ * Usage:
  *   const link = AgentLink.create({
- *     modality: { voiceInput: false },       // text_with_tts 默认不开麦
+ *     modality: { voiceInput: false },       // text_with_tts defaults to mic off
  *     on: {
- *       userFinal:  (text) => {...},          // 用户一句话最终态
- *       agentDelta: (roundid, fullText) => {},// AI 增量字幕
- *       agentFinal: (roundid, fullText) => {},// AI 一轮结束
+ *       userFinal:  (text) => {...},          // final user utterance
+ *       agentDelta: (roundid, fullText) => {},// incremental AI subtitle
+ *       agentFinal: (roundid, fullText) => {},// end of one AI turn
  *       state:      (label) => {},            // listening/thinking/speaking/idle
- *       system:     (text) => {},             // 系统提示
+ *       system:     (text) => {},             // system message
  *       error:      (err)  => {},
  *       health:     (checks, allOk, raw) => {},
  *     },
  *   });
  *   await link.connect();      // get_config + enterRoom + agent/start
- *   link.sendText("你好");      // 文本注入（会触发 userFinal 回调由调用方渲染）
+ *   link.sendText("Hello");     // text injection (triggers userFinal callback for the caller to render)
  *   await link.disconnect();
  * ===================================================================== */
 (function (global) {

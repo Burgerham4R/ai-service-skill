@@ -1,35 +1,35 @@
-# Web Demo · 3 步启动指南
+# Web Demo · 3-Step Quick Start Guide
 
-> 本目录为 conversation-core 的最小可运行验证页，**不含任何业务逻辑**。
+> This directory is the minimal runnable verification page for conversation-core, **containing no business logic**.
 
-## 三步启动
+## Three Steps to Start
 
 ```bash
-# 1. 安装依赖（首次）
+# 1. Install dependencies (first time)
 pip install -r capabilities/conversation-core/requirements.txt
 
-# 2. 配置三把 Key（交互式引导）
+# 2. Configure three keys (interactive guide)
 python scripts/setup-credentials.py
 
-# 3. 启动 Demo
+# 3. Launch the Demo
 bash start.sh
-# 或：cd capabilities/conversation-core && python -m src.server
+# or: cd capabilities/conversation-core && python -m src.server
 ```
 
-打开浏览器访问 <http://localhost:3000>。
+Open your browser and visit <http://localhost:3000>.
 
-## 验证清单
+## Verification Checklist
 
-打开页面后按以下顺序检查：
+After opening the page, check in the following order:
 
-1. 顶部状态栏三盏指示灯由 `灰色` → `黄色（pending）` → `绿色`。
-2. 三盏灯全绿后「开始对话」按钮可点击。
-3. 点击后会自动调用 `/api/v1/get_config` 与 `/api/v1/agent/start`，控制台会输出 `task_id`。
-4. 文字输入框中发送任意文字，可在 TRTC 控制台看到 ServerPushText 注入记录。
+1. The three indicator LEDs in the top status bar go from `gray` → `yellow (pending)` → `green`.
+2. Once all three LEDs are green, the "Start Conversation" button becomes clickable.
+3. Clicking it automatically calls `/api/v1/get_config` and `/api/v1/agent/start`; the console will output `task_id`.
+4. Send any text in the text input box; you can see the ServerPushText injection record in the TRTC console.
 
-## 故障诊断
+## Troubleshooting
 
-页面右上角点击「重新检测」可强制刷新连通性。失败时浏览器控制台会输出结构化诊断，例如：
+Click "Recheck" in the top-right corner to force a connectivity refresh. On failure, the browser console will output structured diagnostics, e.g.:
 
 ```json
 {
@@ -39,10 +39,10 @@ bash start.sh
 }
 ```
 
-参照表中 `error_code` 对照 `INTEGRATION.md` 故障字典定位问题。
+Cross-reference the `error_code` with the `INTEGRATION.md` troubleshooting dictionary to locate the issue.
 
-## 不在本 Demo 范围内的内容
+## Not in Scope for This Demo
 
-- 真实音频采集与 TRTC RTC 入房（由 Phase 2 `frontend-spa` 适配器或集成方负责）
-- 业务知识库 / FAQ / 工具调用（由独立能力包叠加）
-- 数字人渲染、转人工、会话纪要等（由独立能力包叠加）
+- Real audio capture and TRTC RTC room entry (handled by Phase 2 `frontend-spa` adapter or the integrator)
+- Business knowledge base / FAQ / tool calling (overlaid by standalone capability packages)
+- Digital human rendering, handoff, session summaries, etc. (overlaid by standalone capability packages)

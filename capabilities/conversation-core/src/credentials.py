@@ -1,9 +1,9 @@
-"""三把 Key 凭证读取与封装。
+"""3-Key credential reading and encapsulation.
 
-凭证仅来自环境变量（P0 Secrets 规范：env-only），不从代码或
-配置文件中读取明文。读取后以 dataclass 形式向上层暴露，调用
-方不应在日志中打印整个对象——而是依赖 log_filter.RedactingFilter
-做兜底脱敏。
+Credentials come only from environment variables (P0 Secrets spec: env-only); never
+read from code or configuration files in plain text. After reading, they are exposed
+to upper layers as dataclasses. Callers should not log the entire object — instead,
+rely on log_filter.RedactingFilter for fallback redaction.
 """
 from __future__ import annotations
 
@@ -14,7 +14,7 @@ from typing import Optional
 
 @dataclass(frozen=True)
 class TencentCloudCredential:
-    """第一把 Key：腾讯云 API 密钥（用于 STS / TRTC 控制面 REST 调用）。"""
+    """Key 1: Tencent Cloud API keys (used for STS / TRTC control plane REST calls)."""
 
     secret_id: str
     secret_key: str
@@ -27,12 +27,12 @@ class TencentCloudCredential:
 
 @dataclass(frozen=True)
 class TrtcCredential:
-    """第二把 Key：TRTC Conversational AI 应用凭据。
+    """Key 2: TRTC Conversational AI application credentials.
 
-    SDKAppID 与 SDKSecretKey 用于生成 UserSig 及调用 ConversationAI。
-    region 决定调用国际站还是国内站 endpoint：
-      - "intl" → 应用在 https://console.trtc.io 申请（默认）
-      - "cn"   → 应用在 https://console.cloud.tencent.com/trtc 申请
+    SDKAppID and SDKSecretKey are used to generate UserSig and call ConversationAI.
+    region determines whether to call the international or China endpoint:
+      - "intl" → Application registered at https://console.trtc.io (default)
+      - "cn"   → Application registered at https://console.cloud.tencent.com/trtc
     """
 
     sdk_app_id: int
@@ -58,7 +58,7 @@ class TrtcCredential:
 
 @dataclass(frozen=True)
 class LlmCredential:
-    """第三把 Key：外部 LLM 接入密钥（OpenAI 兼容协议）。"""
+    """Key 3: External LLM access key (OpenAI-compatible protocol)."""
 
     api_key: str
     api_url: str = "https://api.openai.com/v1/chat/completions"
@@ -72,7 +72,7 @@ class LlmCredential:
 
 @dataclass(frozen=True)
 class Credentials:
-    """三把 Key 聚合容器。"""
+    """3-Key aggregate container."""
 
     tencent_cloud: TencentCloudCredential
     trtc: TrtcCredential
@@ -108,9 +108,9 @@ def _int_env(key: str, default: int = 0) -> int:
 
 
 def load_from_env() -> Credentials:
-    """从环境变量加载三把 Key。
+    """Load the 3 keys from environment variables.
 
-    所有键名与 .env.example / setup-credentials.py 输出保持一致。
+    All key names match .env.example / setup-credentials.py output.
     """
     return Credentials(
         tencent_cloud=TencentCloudCredential(

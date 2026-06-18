@@ -1,14 +1,14 @@
-"""三级降级 adapter 代码生成器（Phase 3 阶段 4）。
+"""Three-tier fallback adapter code generator (Phase 3 Stage 4).
 
-输入：``ContractDiff`` 集合 + 用户原始接口 ParsedApi 集合 + 能力包目录。
-输出：``capabilities/<name>/src/adapters/user_custom.py``（L1/L2）或
-      指向 ``INTERFACE_ADAPT.md`` 的章节路径（L3）。
+Input: set of ``ContractDiff`` + user's original ParsedApi set + capability directory.
+Output: ``capabilities/<name>/src/adapters/user_custom.py`` (L1/L2) or
+        section path pointing to ``INTERFACE_ADAPT.md`` (L3).
 
-设计原则：
-- L1 / L2 都生成同一个 ``user_custom.py``，只是 L2 包含 ``# TODO`` 注释让用户补完
-- L1 / L2 优先继承 ``DefaultRest*Client`` 复用 HTTP / 鉴权 / 安全校验
-- L3 不生成代码，只输出 INTERFACE_ADAPT.md 中对应级别的章节路径
-- 生成产物**幂等**：每次重写时先备份旧 ``user_custom.py`` 为 ``.bak``
+Design principles:
+- Both L1 and L2 generate the same ``user_custom.py``; L2 just includes ``# TODO`` comments for the user to fill in
+- L1 / L2 preferentially inherit from ``DefaultRest*Client`` to reuse HTTP / auth / security validation
+- L3 generates no code — only outputs the section path from INTERFACE_ADAPT.md at the corresponding level
+- Generated artifacts are **idempotent**: old ``user_custom.py`` is backed up as ``.bak`` before each rewrite
 """
 from __future__ import annotations
 
@@ -28,7 +28,7 @@ from .curl_parser import ParsedApi
 
 
 # ---------------------------------------------------------------------------
-# 输入聚合
+# Input aggregation
 # ---------------------------------------------------------------------------
 @dataclass
 class ApiAdaptation:
@@ -41,7 +41,7 @@ class ApiAdaptation:
     @property
     def level(self) -> DegradeLevel:
         if self.diff is None:
-            return DegradeLevel.L1  # 用户未提供 → 走默认契约
+            return DegradeLevel.L1  # user did not provide → use default contract
         return self.diff.level
 
 
@@ -49,10 +49,10 @@ class ApiAdaptation:
 class CodegenResult:
     level: DegradeLevel
     capability: str
-    artifact: str = ""               # 生成文件的相对路径或文档路径
+    artifact: str = ""               # relative path of generated file or doc path
     todos: List[str] = field(default_factory=list)
     notes: List[str] = field(default_factory=list)
-    enable_env: Dict[str, str] = field(default_factory=dict)  # 启用所需 env
+    enable_env: Dict[str, str] = field(default_factory=dict)  # env vars needed to enable
 
     def to_dict(self) -> Dict:
         return {
@@ -66,7 +66,7 @@ class CodegenResult:
 
 
 # ---------------------------------------------------------------------------
-# 已知能力包的代码生成模板
+# Code generation templates for known capability packages
 # ---------------------------------------------------------------------------
 _KNOWN_CAPABILITIES = {
     "human-handoff": {
@@ -87,7 +87,7 @@ _KNOWN_CAPABILITIES = {
 
 
 # ---------------------------------------------------------------------------
-# 主入口
+# Main entry
 # ---------------------------------------------------------------------------
 def generate_user_custom(
     contract: BusinessContract,
@@ -98,7 +98,7 @@ def generate_user_custom(
     auth_header: str = "",
     dry_run: bool = False,
 ) -> CodegenResult:
-    """根据 adaptations 推断整体级别 → 生成 user_custom.py 或返回 L3 引导路径。"""
+    """Infer overall level from adaptations → generate user_custom.py or return L3 guidance path."""
 
     levels = [a.level for a in adaptations]
     overall = max(levels, key=lambda lv: ["L1", "L2", "L3"].index(lv.value)) if levels else DegradeLevel.L1
@@ -115,13 +115,13 @@ def generate_user_custom(
             result.artifact = str(sop)
         if known is None:
             result.notes.append(
-                f"能力包 {cap_name} 暂无 codegen 模板，请手工按 INTERFACE_ADAPT.md 实现"
+                f"Capability {cap_name} has no codegen template; implement manually per INTERFACE_ADAPT.md"
             )
         else:
-            result.notes.append("协议级差异，请按 INTERFACE_ADAPT.md §5 L3 模板手工实现")
+            result.notes.append("Protocol-level differences; implement manually per INTERFACE_ADAPT.md §5 L3 template")
         return result
 
-    # 渲染代码
+    # Render code
     code = _render_user_custom(contract, adaptations, known, base_url, auth_header)
     todos = _collect_todos(adaptations)
 
@@ -156,7 +156,7 @@ def generate_user_custom(
 
 
 # ---------------------------------------------------------------------------
-# 代码块工具：以"行 + 缩进级别"组装代码，避开 textwrap.dedent / f-string 缩进陷阱
+# Code block utilities: assemble code by "line + indent level", avoiding textwrap.dedent / f-string indent traps
 # ---------------------------------------------------------------------------
 INDENT = "    "  # 4 spaces
 
@@ -171,7 +171,7 @@ def _indent_block(text: str, level: int) -> str:
 
 
 # ---------------------------------------------------------------------------
-# user_custom.py 整体渲染
+# user_custom.py full render
 # ---------------------------------------------------------------------------
 def _render_user_custom(
     contract: BusinessContract,
@@ -200,7 +200,7 @@ def _render_user_custom(
     lines.append("Coverage summary:")
     lines.append(summary)
     lines.append("")
-    lines.append("由 ``scripts/contract-adapt.py`` 生成，请勿手工覆盖；下次运行会自动备份为 .bak。")
+    lines.append("Automatically generated by ``scripts/contract-adapt.py``. Do not edit by hand; re-running creates a .bak backup.")
     lines.append('"""')
     lines.append("from __future__ import annotations")
     lines.append("")
@@ -211,7 +211,7 @@ def _render_user_custom(
     lines.append("")
     lines.append("")
     lines.append(f"class {adapter_class}({base_class}):")
-    lines.append(f'    """L1/L2 字段映射适配器（{cap}）。"""')
+    lines.append(f'    """L1/L2 field-mapping adapter ({cap})."""')
     lines.append("")
 
     # 鉴权头覆写（如有）

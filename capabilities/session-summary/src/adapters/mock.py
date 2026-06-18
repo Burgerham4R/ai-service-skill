@@ -1,4 +1,4 @@
-"""mock 写回 sink —— 默认实现，无外部依赖，便于演示。"""
+"""mock write-back sink — default implementation, no external dependencies, suitable for demos."""
 from __future__ import annotations
 
 import hashlib

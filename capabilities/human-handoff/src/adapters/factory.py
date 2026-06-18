@@ -1,12 +1,12 @@
-"""adapter 工厂：根据环境变量挑选 HandoffClient 实现。
+"""adapter factory: selects HandoffClient implementation based on environment variable.
 
-环境变量 `HH_ADAPTER`：
-    local_queue   默认本地内存队列（生产可用，零依赖）
-    mock          演示数据（包含若干预置工单，用于录视频）
-    default_rest  按 business_contract 默认契约调用远程工单系统
-    user_custom   用户接入向导（contract-adapt.py）生成的实现
+Environment variable `HH_ADAPTER`:
+    local_queue   Default local in-memory queue (production-ready, zero dependencies)
+    mock          Demo data (includes several preset tickets for video recording)
+    default_rest  Call remote ticketing system per business_contract default contract
+    user_custom   User integration wizard (contract-adapt.py) generated implementation
 
-未设置或值非法时，回退到 local_queue（保留与 Phase 2 的行为兼容）。
+When not set or invalid, fall back to local_queue (keeps behavior compatibility with Phase 2).
 """
 from __future__ import annotations
 
@@ -53,7 +53,7 @@ def _build(name: str) -> Optional[HandoffClient]:
 
 
 def build_default() -> HandoffClient:
-    """按环境变量构建默认 client；非法配置回落到 local_queue。"""
+    """Build default client from environment variables; invalid config falls back to local_queue."""
     name = (os.getenv("HH_ADAPTER") or "local_queue").strip().lower()
     if name not in _VALID:
         logger.warning("HH_ADAPTER=%s is not recognised; using local_queue", name)
@@ -66,7 +66,7 @@ def build_default() -> HandoffClient:
 
 
 # ---------------------------------------------------------------------------
-# 全局单例
+# Global singleton
 # ---------------------------------------------------------------------------
 _singleton: Optional[HandoffClient] = None
 
@@ -79,7 +79,7 @@ def get_client() -> HandoffClient:
 
 
 def set_client(client: HandoffClient) -> None:
-    """仅供测试用：注入自定义 client。"""
+    """For testing only: inject a custom client."""
     global _singleton
     _singleton = client
 

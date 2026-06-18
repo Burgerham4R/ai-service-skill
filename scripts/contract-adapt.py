@@ -1,35 +1,35 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-"""能力包接口契约适配器（Phase 3 阶段 4）。
+"""Capability contract adapter (Phase 3 Stage 4).
 
-把用户已有系统的接口（curl 或 OpenAPI）适配到能力包默认契约，
-生成 ``capabilities/<name>/src/adapters/user_custom.py``，并按 L1/L2/L3 三级降级。
+Adapts the user's existing system interfaces (curl or OpenAPI) to the capability's default contract,
+generates ``capabilities/<name>/src/adapters/user_custom.py``, with L1/L2/L3 three-tier fallback.
 
-用法
-----
-    # 1) 仅展示某能力包当前的默认契约
+Usage
+-----
+    # 1) Show the current default contract for a capability
     python3 scripts/contract-adapt.py human-handoff --show-default --json
 
-    # 2) 用 curl 文件做单接口对齐
+    # 2) Align a single API using a curl file
     python3 scripts/contract-adapt.py human-handoff \
         --api-name ticket.create \
         --curl-file /tmp/user_create.curl \
         --base-url https://crm.example.com \
         --apply --json
 
-    # 3) 用 OpenAPI 文件做整能力包对齐（一次性贴所有 outbound api）
+    # 3) Align an entire capability using an OpenAPI file (all outbound APIs at once)
     python3 scripts/contract-adapt.py knowledge-base \
         --openapi-file /tmp/user-faq.yaml \
         --apply --json
 
-    # 4) dry-run（不写盘）
+    # 4) dry-run (no files written)
     python3 scripts/contract-adapt.py human-handoff \
-        --curl-file /tmp/x.curl --json   # 不带 --apply 即 dry-run
+        --curl-file /tmp/x.curl --json   # omit --apply for dry-run
 
-安全约束
---------
-- 用户接口描述只接受**文件路径**，不允许内联（避免 shell history 把 token 写进日志）
-- 生成的代码会自动备份为 ``user_custom.py.bak``
+Security Constraints
+--------------------
+- User API descriptions only accept **file paths**; inline input is not allowed (avoids shell history logging tokens)
+- Generated code is automatically backed up as ``user_custom.py.bak``
 """
 from __future__ import annotations
 
@@ -51,7 +51,7 @@ from scripts.lib import openapi_parser as op  # noqa: E402
 
 
 # ---------------------------------------------------------------------------
-# 输出工具
+# Output utilities
 # ---------------------------------------------------------------------------
 def _emit(payload: Dict, json_mode: bool) -> None:
     if json_mode:
@@ -69,7 +69,7 @@ def _emit_error(message: str, json_mode: bool, *, code: str = "GENERAL") -> int:
 
 
 # ---------------------------------------------------------------------------
-# 默认契约展示
+# Default contract display
 # ---------------------------------------------------------------------------
 def _show_default(contract: cr.BusinessContract, json_mode: bool) -> int:
     payload = {
@@ -99,7 +99,7 @@ def _show_default(contract: cr.BusinessContract, json_mode: bool) -> int:
 
 
 # ---------------------------------------------------------------------------
-# 用户接口装载
+# User API loading
 # ---------------------------------------------------------------------------
 def _load_user_apis(
     *,
@@ -107,7 +107,7 @@ def _load_user_apis(
     openapi_file: Optional[Path],
     api_name: Optional[str],
 ) -> Tuple[List[cp.ParsedApi], List[str]]:
-    """返回 (用户 ParsedApi 列表, 警告)；调用方决定如何把它们与默认契约 pairing。"""
+    """Return (user ParsedApi list, warnings); the caller decides how to pair them with the default contract."""
     warnings: List[str] = []
     apis: List[cp.ParsedApi] = []
 
@@ -135,7 +135,7 @@ def _load_user_apis(
 
 
 # ---------------------------------------------------------------------------
-# pairing：把用户 API 与默认契约的 outbound apis 配对
+# pairing: match user APIs with the default contract's outbound apis
 # ---------------------------------------------------------------------------
 def _pair_apis(
     contract: cr.BusinessContract,
@@ -149,13 +149,13 @@ def _pair_apis(
         target = contract.get_api(explicit_name)
         if target is None:
             raise ValueError(f"no api named {explicit_name!r} in contract {contract.capability}")
-        # 显式指定 → 用第一个用户 api 配上
+        # explicit name → pair with the first user api
         if not user_apis:
             return [cg.ApiAdaptation(default=target, user=None, diff=None)]
         diff = cr.diff_contracts(target, user_apis[0])
         return [cg.ApiAdaptation(default=target, user=user_apis[0], diff=diff)]
 
-    # 自动 pairing：按 method + path 后缀相似度匹配
+    # auto pairing: match by method + path suffix similarity
     paired: Dict[str, cp.ParsedApi] = {}
     used: set = set()
     for default_api in outbound:
@@ -179,13 +179,13 @@ def _best_match(
     user_apis: List[cp.ParsedApi],
     used: set,
 ) -> Optional[cp.ParsedApi]:
-    """简易匹配：method 必须一致；path 末段相似度最高的胜出。"""
+    """Simple match: method must match; best path tail similarity wins."""
     candidates = [u for u in user_apis if id(u) not in used and u.method.upper() == default_api.method.upper()]
     if not candidates:
         return None
     if len(candidates) == 1:
         return candidates[0]
-    # 取最后一段 path 的语义相似度
+    # best path tail semantic similarity
     default_tail = default_api.path.rstrip("/").rsplit("/", 1)[-1] or default_api.path
     best = candidates[0]
     best_score = -1
@@ -210,43 +210,43 @@ def _similarity(a: str, b: str) -> int:
 
 
 # ---------------------------------------------------------------------------
-# 主入口
+# Main entry
 # ---------------------------------------------------------------------------
 def main(argv=None) -> int:
     parser = argparse.ArgumentParser(
         prog="contract-adapt",
-        description="能力包接口契约适配（curl / OpenAPI → user_custom.py）",
+        description="Capability contract adaptation (curl / OpenAPI → user_custom.py)",
     )
-    parser.add_argument("capability", help="能力包名（capabilities/ 下的子目录名）")
-    parser.add_argument("--curl-file", type=Path, default=None, help="用户接口 curl 文件路径")
+    parser.add_argument("capability", help="Capability name (subdirectory under capabilities/)")
+    parser.add_argument("--curl-file", type=Path, default=None, help="User API curl file path")
     parser.add_argument(
         "--openapi-file",
         type=Path,
         default=None,
-        help="用户接口 OpenAPI YAML / JSON 文件路径",
+        help="User API OpenAPI YAML / JSON file path",
     )
     parser.add_argument(
         "--api-name",
         default="",
-        help="只对齐指定契约名（如 ticket.create），默认尝试自动配对所有 outbound API",
+        help="Align only the specified contract name (e.g., ticket.create); default attempts to auto-pair all outbound APIs",
     )
     parser.add_argument(
         "--base-url",
         default="",
-        help="生成 user_custom.py 时写入的默认 base_url 提示（不会硬编码到代码）",
+        help="Default base_url hint written into user_custom.py (not hardcoded)",
     )
     parser.add_argument(
         "--auth-header",
         default="",
-        help="覆写鉴权头名（如 X-Auth-Token）；为空时沿用默认 Authorization",
+        help="Override auth header name (e.g., X-Auth-Token); defaults to Authorization if empty",
     )
     parser.add_argument(
         "--show-default",
         action="store_true",
-        help="只打印当前能力包的默认契约清单，不做适配",
+        help="Print the current default contract list without adapting",
     )
-    parser.add_argument("--apply", action="store_true", help="把生成的代码写到文件（默认 dry-run）")
-    parser.add_argument("--json", action="store_true", help="输出 JSON")
+    parser.add_argument("--apply", action="store_true", help="Write generated code to file (default is dry-run)")
+    parser.add_argument("--json", action="store_true", help="Output JSON")
     args = parser.parse_args(argv)
 
     json_mode = args.json
@@ -256,7 +256,7 @@ def main(argv=None) -> int:
             f"capability not found: {cap_dir}", json_mode, code="CAP_NOT_FOUND"
         )
 
-    # 1) 加载默认契约
+    # 1) Load default contract
     try:
         contract = cr.load_business_contract(cap_dir)
     except cr.ContractError as exc:
@@ -272,7 +272,7 @@ def main(argv=None) -> int:
             code="MISSING_INPUT",
         )
 
-    # 2) 装载用户接口
+    # 2) Load user API
     try:
         user_apis, warnings = _load_user_apis(
             curl_file=args.curl_file,
@@ -285,16 +285,16 @@ def main(argv=None) -> int:
     if not user_apis:
         return _emit_error("no user API parsed", json_mode, code="EMPTY_INPUT")
 
-    # 3) pairing & diff
+    # 3) Pairing & diff
     try:
         adaptations = _pair_apis(contract, user_apis, args.api_name or None)
     except ValueError as exc:
         return _emit_error(str(exc), json_mode, code="PAIRING_FAILED")
 
-    # 4) 静态校验 manifest（warning 只放进 payload）
+    # 4) Static manifest validation (warnings only in payload)
     manifest_warnings = cr.validate_manifest(cap_dir)
 
-    # 5) 代码生成
+    # 5) Code generation
     result = cg.generate_user_custom(
         contract,
         adaptations,
@@ -327,7 +327,7 @@ def main(argv=None) -> int:
         ],
     }
     _emit(payload, json_mode)
-    return 0 if result.level != cr.DegradeLevel.L3 else 0  # L3 也算正常退出，由 AI 决定下一步
+    return 0 if result.level != cr.DegradeLevel.L3 else 0  # L3 also exits normally; AI decides next step
 
 
 if __name__ == "__main__":

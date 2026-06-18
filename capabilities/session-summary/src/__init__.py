@@ -1,2 +1,2 @@
-"""session-summary 能力包：会话纪要 + 结构化摘要。"""
+"""session-summary capability: session summary + structured abstract."""
 __version__ = "1.0.0"

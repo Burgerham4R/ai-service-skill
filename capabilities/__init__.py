@@ -1,9 +1,9 @@
-"""capabilities 命名空间根。
+"""capabilities namespace root.
 
-子目录为短横线命名（manifest 风格），但 Python 模块需用下划线命名，
-本文件在导入时按需建立别名（仅当对应目录存在）。
+Subdirectories use hyphenated names (manifest style), but Python modules require underscore names.
+This file creates aliases on import as needed (only when the corresponding directory exists).
 
-例如：
+Example:
     capabilities.knowledge-base/  →  import capabilities.knowledge_base
 """
 from __future__ import annotations
@@ -14,7 +14,7 @@ from pathlib import Path
 
 _ROOT = Path(__file__).resolve().parent
 
-# 短横线目录 → 下划线模块别名
+# Hyphenated directory → underscore module alias
 _ALIASES = {
     "knowledge-base": "knowledge_base",
     "tool-calling": "tool_calling",
@@ -31,7 +31,7 @@ def _install_alias(dirname: str, modname: str) -> None:
     full_name = f"{__name__}.{modname}"
     if full_name in sys.modules:
         return
-    # 注册一个可被子模块继续 import 的命名空间包
+    # Register a namespace package that sub-modules can continue importing
     import types
 
     pkg = types.ModuleType(full_name)

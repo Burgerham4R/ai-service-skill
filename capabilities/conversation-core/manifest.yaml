@@ -1,78 +1,78 @@
-# conversation-core 能力包自描述清单
-# 类型: skeleton（骨架，默认安装；不内置任何业务场景）
+# conversation-core capability self-describing manifest
+# Type: skeleton (always installed by default; no built-in business scenarios)
 
 name: "conversation-core"
 version: "1.0.0"
 type: "skeleton"
-description: "通用 Voice Agent 骨架，提供 ASR/LLM/TTS/会话管理基础能力，不内置任何业务逻辑"
+description: "Generic Voice Agent skeleton providing ASR/LLM/TTS/session management core capabilities without any built-in business logic"
 
 # ---------------------------------------------------------------------------
-# 依赖声明
+# Dependency declaration
 # ---------------------------------------------------------------------------
-dependencies: []   # 骨架层无任何依赖
+dependencies: []   # Skeleton layer has no dependencies
 
 # ---------------------------------------------------------------------------
-# 注入点（供 Phase 2 能力包叠加）
-# 规范: position 字段统一使用 before:函数名 / after:函数名 / replace:函数名
+# Injection points (for Phase 2 capability overlay)
+# Convention: position field uses before:function_name / after:function_name / replace:function_name
 # ---------------------------------------------------------------------------
 injection_points:
   - id: "agent.before_start"
     target: "src/agent.py"
     position: "before:_ext_before_start_"
-    description: "在 start_agent 方法体内注入代码（如知识库检索结果拼接到 instructions）；锚点位于 start_agent 方法体内，确保可访问 config/info 等局部变量"
+    description: "Inject code inside the start_agent method body (e.g. prepend KB search results to instructions); anchor is inside start_agent method body to ensure access to local variables like config/info"
 
   - id: "agent.after_start"
     target: "src/agent.py"
     position: "before:_ext_after_start_"
-    description: "在 task 拉起成功后注入会话级钩子（如转人工状态机初始化）；锚点位于 start_agent 方法体内"
+    description: "Inject session-level hooks after the AI task is successfully launched (e.g. initialize human handoff state machine); anchor is inside start_agent method body"
 
   - id: "agent.before_push_text"
     target: "src/agent.py"
     position: "before:_ext_before_push_text_"
-    description: "在文字注入下发前拦截（如关键词触发转人工 / 工具调用）；锚点位于 push_text 方法体内"
+    description: "Intercept before text injection is sent (e.g. keyword-triggered handoff / tool calling); anchor is inside push_text method body"
 
   - id: "server.router_extension"
     target: "src/server.py"
     position: "after:app.include_router"
-    description: "用于追加业务能力包的 FastAPI 子路由"
+    description: "Append business capability FastAPI sub-routers"
 
   - id: "modality.channel_resolver"
     target: "src/modality.py"
     position: "replace:resolve_input_channel"
-    description: "用于覆盖默认通道选择策略，如电商场景禁用语音输入"
+    description: "Override default channel selection strategy, e.g. disable voice input in e-commerce scenarios"
 
 # ---------------------------------------------------------------------------
-# 配置接口
+# Configuration interface
 # ---------------------------------------------------------------------------
 config:
   credentials:
     - key: "TENCENT_CLOUD_SECRET_ID"
       required: true
-      description: "腾讯云 API SecretId（第一把 Key）"
+      description: "Tencent Cloud API SecretId (Key 1)"
     - key: "TENCENT_CLOUD_SECRET_KEY"
       required: true
-      description: "腾讯云 API SecretKey（第一把 Key）"
+      description: "Tencent Cloud API SecretKey (Key 1)"
     - key: "TENCENT_CLOUD_REGION"
       required: false
       default: "ap-guangzhou"
-      description: "腾讯云 API 地域"
+      description: "Tencent Cloud API region"
     - key: "TRTC_SDK_APP_ID"
       required: true
-      description: "TRTC Conversational AI 应用 SDKAppID（第二把 Key）"
+      description: "TRTC Conversational AI application SDKAppID (Key 2)"
     - key: "TRTC_SDK_SECRET_KEY"
       required: true
-      description: "TRTC Conversational AI 应用 SDKSecretKey（第二把 Key）"
+      description: "TRTC Conversational AI application SDKSecretKey (Key 2)"
     - key: "LLM_API_KEY"
       required: true
-      description: "外部 LLM 接入密钥（第三把 Key）"
+      description: "External LLM access key (Key 3)"
     - key: "LLM_API_URL"
       required: false
       default: "https://api.openai.com/v1/chat/completions"
-      description: "OpenAI 兼容协议 Endpoint"
+      description: "OpenAI-compatible protocol endpoint"
     - key: "LLM_MODEL"
       required: false
       default: "gpt-4o-mini"
-      description: "默认 LLM 模型名称"
+      description: "Default LLM model name"
 
   io_modality:
     voice_input:
@@ -97,46 +97,46 @@ config:
       timeout_ms: 0
 
 # ---------------------------------------------------------------------------
-# 暴露 API 端点
+# Exposed API endpoints
 # ---------------------------------------------------------------------------
 endpoints:
   - method: GET
     path: /api/v1/health
-    description: 三把 Key 实时连通性自检（Web Demo 状态栏数据源）
+    description: Real-time connectivity self-check for 3 keys (Web Demo status bar data source)
   - method: POST
     path: /api/v1/get_config
-    description: 颁发房间号 / UserSig / 模态配置
+    description: Issue room number / UserSig / modality configuration
   - method: POST
     path: /api/v1/agent/start
-    description: 启动 AI 通道机器人（StartAIConversation）
+    description: Start AI channel bot (StartAIConversation)
   - method: POST
     path: /api/v1/agent/stop
-    description: 停止 AI 通道机器人（StopAIConversation）
+    description: Stop AI channel bot (StopAIConversation)
   - method: POST
     path: /api/v1/agent/control
-    description: 文本注入 / 打断（ControlAIConversation/ServerPushText）
+    description: Text injection / interruption (ControlAIConversation/ServerPushText)
   - method: GET
     path: /api/v1/sessions
-    description: 内存会话列表（仅调试用途）
+    description: In-memory session list (debugging only)
 
 # ---------------------------------------------------------------------------
-# 技术栈集成规则
+# Tech stack integration rules
 # ---------------------------------------------------------------------------
 integration:
   mode: "auto"
   auto_adapters:
     - tech_stack: ["react", "vue", "angular"]
       adapter: "frontend-spa"
-      description: "前端 SPA 适配器，生成入房组件并嵌入 web-demo 调用骨架 API"
+      description: "Frontend SPA adapter, generates join-room component and embeds web-demo to call skeleton API"
     - tech_stack: ["express", "koa", "fastify", "next"]
       adapter: "node-backend"
-      description: "Node.js 后端适配器，生成代理路由转发至骨架 /api/v1/*"
+      description: "Node.js backend adapter, generates proxy routes forwarding to skeleton /api/v1/*"
     - tech_stack: ["spring-boot", "quarkus"]
       adapter: "java-backend"
-      description: "Java 后端适配器，生成 Filter 转发至骨架"
+      description: "Java backend adapter, generates Filter forwarding to skeleton"
     - tech_stack: ["flask", "fastapi", "django"]
       adapter: "python-backend"
-      description: "Python 后端适配器，生成装饰器或子应用挂载"
+      description: "Python backend adapter, generates decorators or sub-app mounting"
   fallback:
     guided_templates:
       - "integration-templates/generic-frontend.md"
@@ -149,9 +149,10 @@ integration:
         - pypi: "trtc-voice-agent"
 
 # ---------------------------------------------------------------------------
-# 业务接口契约（Phase 3 新增；遵循 references/business-contract-spec.md v1.0）
-# 注：本能力为 skeleton，源码本期不重构；仅声明对外契约供 contract-adapt.py 消费。
-# port_class / default_adapter 字段保留为 null，待 Phase 4 重构时补全。
+# Business contract (Phase 3; follows references/business-contract-spec.md v1.0)
+# Note: This is a skeleton capability; source code is not refactored in this phase;
+# only declares the external contract for contract-adapt.py consumption.
+# port_class / default_adapter fields remain null, to be filled in Phase 4 refactor.
 # ---------------------------------------------------------------------------
 business_contract:
   port_class: null
@@ -159,12 +160,12 @@ business_contract:
   mock_adapter: null
   customization_sop: "INTERFACE_ADAPT.md"
   external_apis:
-    # LLM：OpenAI 兼容协议是默认契约；可被替换为 Claude / Qwen / DeepSeek 等
+    # LLM: OpenAI-compatible protocol is the default contract; can be replaced with Claude / Qwen / DeepSeek etc.
     - name: llm.chat_completions
       direction: outbound
       method: POST
       path: /v1/chat/completions
-      description: "调用外部 LLM 完成文本回复（OpenAI Chat Completions 兼容协议）"
+      description: "Call external LLM for text response (OpenAI Chat Completions compatible protocol)"
       request_schema:
         model: string
         messages:
@@ -192,13 +193,14 @@ business_contract:
         name: Authorization
       timeout_ms: 30000
 
-    # 腾讯云 TRTC Conversational AI（控制面）：StartAIConversation 等
-    # 与 LLM 不同，TRTC 控制面契约不可适配（强绑腾讯云），此处仅做声明便于装配阶段提示
+    # Tencent Cloud TRTC Conversational AI (control plane): StartAIConversation etc.
+    # Unlike LLM, the TRTC control plane contract is not adaptable (tightly bound to Tencent Cloud);
+    # declared here only for assembly-phase awareness
     - name: trtc.start_ai_conversation
       direction: outbound
       method: POST
       path: "tencentcloudapi.com/?Action=StartAIConversation"
-      description: "腾讯云 TRTC 控制面：拉起 AI 通话（强绑腾讯云协议，不可适配）"
+      description: "Tencent Cloud TRTC control plane: launch AI conversation (tightly bound to Tencent Cloud protocol, not adaptable)"
       request_schema:
         SdkAppId: int
         RoomId: string
@@ -209,11 +211,11 @@ business_contract:
       response_schema:
         TaskId: string
         SessionId: string
-      adapter_slots: []        # 不允许重映射
+      adapter_slots: []        # No remapping allowed
       timeout_ms: 10000
 
 # ---------------------------------------------------------------------------
-# 安全声明（P0 缓解措施落地）
+# Security declarations (P0 mitigations in place)
 # ---------------------------------------------------------------------------
 security:
   log_redaction:
@@ -231,18 +233,18 @@ security:
     xss_guard: true
     prompt_injection_guard: true
   credential_storage:
-    source: "env-only"     # 凭证仅来自环境变量
+    source: "env-only"     # Credentials only from environment variables
     cache_file: ".credentials_cache"
     cache_permission: "0600"
     env_file_permission: "0600"
   network:
-    enforce_https: true    # 全链路 HTTPS
+    enforce_https: true    # End-to-end HTTPS
 
 # ---------------------------------------------------------------------------
-# 验收标准（与开发指南 §11.1 对齐）
+# Acceptance criteria (aligned with dev guide §11.1)
 # ---------------------------------------------------------------------------
 acceptance:
-  - "ASR/LLM/TTS 链路无业务逻辑硬编码"
-  - "三把 Key 输入后立即执行连通性自检"
-  - "Web Demo 顶部状态栏三盏指示灯全绿"
-  - "凭证缓存文件权限为 600，日志中无明文 Key"
+  - "ASR/LLM/TTS pipeline has no hard-coded business logic"
+  - "3-key connectivity self-check executed immediately upon input"
+  - "Web Demo top status bar: all 3 indicator LEDs green"
+  - "Credential cache file permissions set to 600; no plain-text keys in logs"

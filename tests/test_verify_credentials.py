@@ -1,16 +1,16 @@
-"""Phase 3 阶段 6：scripts/verify-credentials.py + scripts/lib/credential_validators 测试。
+"""Phase 3 Stage 6: scripts/verify-credentials.py + scripts/lib/credential_validators tests.
 
-覆盖目标：
-- 单元：ValidationResult / BatchResult / load_dotenv / hint 错误码映射
-- 集成（subprocess）：以**空环境**运行 verify-credentials.py
-    → 三把 Key 都未配置 → 必须输出合法 JSON，且 error == "E000"，退出码非零
-- 单元（mock 三家服务）：通过 patch ``health.check_*`` 验证
-    validate_tencent / validate_trtc / validate_llm / validate_all 串联
-    返回的 ValidationResult 字段命中 ``{ok, type, error, message, latency_ms}``
+Coverage targets:
+- Unit: ValidationResult / BatchResult / load_dotenv / hint error code mapping
+- Integration (subprocess): run verify-credentials.py in a **clean environment**
+    → All three keys unconfigured → must output valid JSON with error == "E000" and non-zero exit code
+- Unit (mock all three services): via patch of ``health.check_*`` verify
+    validate_tencent / validate_trtc / validate_llm / validate_all chain
+    returned ValidationResult fields match ``{ok, type, error, message, latency_ms}``
 
-红线（与 SKILL.md §10 工具白名单对齐）：
-- 验证脚本**不接受** Key 作为命令行参数 → 测试用例只通过 .env 与 patch
-- 输出 JSON 不应包含凭证原文（latency_ms / error code 即可）
+Red lines (aligned with SKILL.md §12 Tool Whitelist):
+- Verification script **does not** accept keys as CLI arguments → tests only use .env and patch
+- Output JSON must not contain credential plaintext (latency_ms / error code only)
 """
 from __future__ import annotations
 
@@ -29,16 +29,16 @@ sys.path.insert(0, str(_ROOT))
 
 
 def _run_cli(env_extra=None, args=None):
-    """以隔离环境 fork 一个 verify-credentials.py 子进程。
+    """Fork a verify-credentials.py subprocess in an isolated environment.
 
-    explicitly empties三把 Key 的 env 变量，从而跳过 .env 文件的回退覆盖
-    （load_dotenv 用 setdefault；env 中存在空串会阻止 .env 注入真实值）。
+    Explicitly empties all three Key env variables to prevent .env file fallback overrides
+    (load_dotenv uses setdefault; empty strings in env prevent real values from .env injection).
     """
     env = {
         "PATH": os.environ.get("PATH", ""),
         "HOME": os.environ.get("HOME", ""),
         "PYTHONPATH": str(_ROOT),
-        # 强制清空所有候选 env 变量，确保 ``configured`` 为 False
+        # Force clear all candidate env variables to ensure ``configured`` is False
         "TENCENT_CLOUD_SECRET_ID": "",
         "TENCENT_CLOUD_SECRET_KEY": "",
         "TRTC_SDK_APP_ID": "",
@@ -64,7 +64,7 @@ def _run_cli(env_extra=None, args=None):
 
 
 class CredentialValidatorsUnitTests(unittest.TestCase):
-    """credential_validators 模块的纯单元测试（不发网络请求）。"""
+    """Pure unit tests for the credential_validators module (no network calls)."""
 
     def test_validation_result_to_dict_keys(self):
         from scripts.lib.credential_validators import ValidationResult
@@ -97,7 +97,7 @@ class CredentialValidatorsUnitTests(unittest.TestCase):
         self.assertIn("腾讯云", hint("E001"))
         self.assertIn("TRTC", hint("E002"))
         self.assertIn("LLM", hint("E003"))
-        # 未知错误码 → 空串
+        # Unknown error code → empty string
         self.assertEqual(hint("E999"), "")
 
     def test_load_dotenv_reads_kv(self):
@@ -109,7 +109,7 @@ class CredentialValidatorsUnitTests(unittest.TestCase):
                 encoding="utf-8",
             )
             try:
-                # 清掉同名进程级变量，确保读自文件
+                # Clear same-name process-level vars to ensure reading from file
                 os.environ.pop("FAKE_KEY_FOR_TEST", None)
                 os.environ.pop("FAKE_QUOTED", None)
                 seen = load_dotenv(envf)
@@ -122,11 +122,11 @@ class CredentialValidatorsUnitTests(unittest.TestCase):
 
 
 class VerifyCredentialsCliEmptyEnvTests(unittest.TestCase):
-    """子进程：空环境（无 .env、无 Key）下 verify-credentials.py 行为。"""
+    """Subprocess: verify-credentials.py behavior in a clean environment (no .env, no keys)."""
 
     def setUp(self):
-        # 用一个干净 tmp 目录做 cwd 替身：通过 --env-file 指向不存在的路径，
-        # 同时屏蔽掉仓库根 .env / capabilities/conversation-core/.env 命中的概率
+        # Use a clean tmp directory as cwd stand-in: point --env-file to a non-existent path
+        # while eliminating the chance of hitting the repo root .env / capabilities/conversation-core/.env
         self.tmp = tempfile.TemporaryDirectory()
         self.empty_env = Path(self.tmp.name) / "no.env"
         self.empty_env.write_text("# empty\n", encoding="utf-8")
@@ -147,7 +147,7 @@ class VerifyCredentialsCliEmptyEnvTests(unittest.TestCase):
         self.assertSetEqual(
             set(out.keys()), {"ok", "type", "error", "message", "latency_ms"}
         )
-        # 输出中不应包含真实 Key（empty_env 也确保了这点）
+        # Output must not contain real keys (empty_env also ensures this)
         self.assertNotIn("AKID", proc.stdout)
         self.assertNotIn("AKID", proc.stderr)
 
@@ -176,10 +176,10 @@ class VerifyCredentialsCliEmptyEnvTests(unittest.TestCase):
 
 
 class VerifyCredentialsMockedNetworkTests(unittest.TestCase):
-    """patch health.check_* 来模拟三家服务的成功 / 失败响应。"""
+    """Patch health.check_* to simulate success / failure responses from all three services."""
 
     def setUp(self):
-        # 进程级注入伪 Key（仅用于让 ``configured`` 字段为 True）
+        # Inject fake keys at process level (only to make ``configured`` return True)
         self._keys = {
             "TENCENT_CLOUD_SECRET_ID": "AKID_TEST_FAKE_FAKE_FAKE_FAKE_FAKE_X",
             "TENCENT_CLOUD_SECRET_KEY": "FakeKeyFakeKeyFakeKeyFakeKeyFakeKey",
@@ -202,16 +202,16 @@ class VerifyCredentialsMockedNetworkTests(unittest.TestCase):
                 os.environ[k] = prev
 
     def _import_health(self):
-        """显式导入 conversation-core 的 health 模块以便 patch。
+        """Explicitly import conversation-core's health module for patching.
 
-        清理所有同名 ``src.*`` 缓存（test_handoff_ports / test_kb_ports 的副作用），
-        并把 conversation-core 目录置顶到 sys.path 让 ``src`` 解析回到本能力包。
+        Clean all cached ``src.*`` modules (side effect from test_handoff_ports / test_kb_ports),
+        and push conversation-core to the top of sys.path so ``src`` resolves back to this capability.
         """
         core_dir = _ROOT / "capabilities" / "conversation-core"
-        # 先清掉之前测试注入的 src.* 模块
+        # First clean up src.* modules injected by previous tests
         for name in [k for k in list(sys.modules) if k == "src" or k.startswith("src.")]:
             del sys.modules[name]
-        # 也把其他 capabilities 路径从 sys.path 摘掉，避免歧义
+        # Also remove other capabilities paths from sys.path to avoid ambiguity
         sys.path[:] = [p for p in sys.path if "/capabilities/" not in p]
         sys.path.insert(0, str(core_dir))
         import importlib  # noqa: WPS433
@@ -238,7 +238,7 @@ class VerifyCredentialsMockedNetworkTests(unittest.TestCase):
             r = validate_tencent()
         self.assertFalse(r.ok)
         self.assertEqual(r.error, "E001")
-        # 不回显 Key 原文
+        # Must not echo key plaintext
         self.assertNotIn("FakeKey", r.message)
 
     def test_trtc_ok_local_only(self):
@@ -261,7 +261,7 @@ class VerifyCredentialsMockedNetworkTests(unittest.TestCase):
         self.assertFalse(r.ok)
         self.assertEqual(r.error, "E003")
         self.assertEqual(r.type, "llm")
-        # 输出 message 不能含原始 sk-* 凭证
+        # Output message must not contain raw sk-* credentials
         self.assertNotIn("sk-fake", r.message)
 
     def test_validate_all_aggregates(self):
@@ -277,7 +277,7 @@ class VerifyCredentialsMockedNetworkTests(unittest.TestCase):
         self.assertFalse(batch.ok)
         items = batch.to_dict()["items"]
         self.assertEqual(len(items), 3)
-        # 顺序固定为 tencent → trtc → llm
+        # Order is fixed: tencent → trtc → llm
         self.assertEqual([i["type"] for i in items], ["tencent", "trtc", "llm"])
 
 

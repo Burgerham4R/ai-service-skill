@@ -1,8 +1,8 @@
-"""tool-calling 能力包：α/β 双轨制工具调用。
+"""tool-calling capability: alpha/beta dual-track tool calling.
 
-核心模块：
-- registry  从 YAML 注册声明 + Python entry point 加载工具
-- dispatcher  从对话文本（"/tool name {json}"）中识别并触发调用
-- router  REST 端点
+Core modules:
+- registry  Load tools from YAML registration declarations + Python entry points
+- dispatcher  Recognize and trigger calls from conversation text ("/tool name {json}")
+- router  REST endpoints
 """
 __version__ = "1.0.0"

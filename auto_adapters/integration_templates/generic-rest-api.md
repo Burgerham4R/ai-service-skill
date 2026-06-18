@@ -1,29 +1,29 @@
-# 通用 REST API 接入指南（L3 手动兜底）
+# Generic REST API Integration Guide (L3 Manual Fallback)
 
-> 当 Agent 无法识别你的技术栈，或不在已支持的适配器列表内时，
-> 直接通过 conversation-core 暴露的 REST API 接入。
+> When the Agent cannot identify your tech stack, or it's not in the supported adapter list,
+> connect directly via the REST API exposed by conversation-core.
 
-## 1. 启动骨架
+## 1. Start the Skeleton
 
 ```bash
 cd capabilities/conversation-core
-python -m src.server   # 默认 0.0.0.0:3000
+python -m src.server   # Default 0.0.0.0:3000
 ```
 
-## 2. 端点列表
+## 2. Endpoint List
 
-| 方法 | 路径 | 描述 |
+| Method | Path | Description |
 |:---|:---|:---|
-| GET  | `/api/v1/health`         | 三把 Key 实时连通性 |
-| POST | `/api/v1/get_config`     | 颁发 RoomId / UserSig |
-| POST | `/api/v1/agent/start`    | 启动 AI 通道机器人 |
-| POST | `/api/v1/agent/stop`     | 停止 AI 通道机器人 |
-| POST | `/api/v1/agent/control`  | 文本注入 / 打断 |
-| GET  | `/api/v1/sessions`       | 内存会话列表（调试用） |
+| GET  | `/api/v1/health`         | Real-time connectivity check for 3 keys |
+| POST | `/api/v1/get_config`     | Issue RoomId / UserSig |
+| POST | `/api/v1/agent/start`    | Start AI channel bot |
+| POST | `/api/v1/agent/stop`     | Stop AI channel bot |
+| POST | `/api/v1/agent/control`  | Text injection / interrupt |
+| GET  | `/api/v1/sessions`       | In-memory session list (debugging) |
 
-能力包追加端点：
+Capability extension endpoints:
 
-| 能力 | 前缀 |
+| Capability | Prefix |
 |:---|:---|
 | knowledge-base   | `/api/v1/kb/*` |
 | tool-calling     | `/api/v1/tools/*` |
@@ -31,9 +31,9 @@ python -m src.server   # 默认 0.0.0.0:3000
 | session-summary  | `/api/v1/summary/*` |
 | digital-human    | `/api/v1/digital-human/*` |
 
-## 3. 调用示例
+## 3. Call Examples
 
-### 3.1 申请房间凭据
+### 3.1 Request Room Credentials
 
 ```bash
 curl -X POST http://localhost:3000/api/v1/get_config \
@@ -41,7 +41,7 @@ curl -X POST http://localhost:3000/api/v1/get_config \
   -d '{}'
 ```
 
-返回：
+Response:
 
 ```json
 {
@@ -58,7 +58,7 @@ curl -X POST http://localhost:3000/api/v1/get_config \
 }
 ```
 
-### 3.2 启动 AI 机器人
+### 3.2 Start AI Bot
 
 ```bash
 curl -X POST http://localhost:3000/api/v1/agent/start \
@@ -66,28 +66,28 @@ curl -X POST http://localhost:3000/api/v1/agent/start \
   -d '{"session_id":"xxx","language":"zh"}'
 ```
 
-### 3.3 文本注入
+### 3.3 Text Injection
 
 ```bash
 curl -X POST http://localhost:3000/api/v1/agent/control \
   -H "Content-Type: application/json" \
-  -d '{"session_id":"xxx","text":"你好","interrupt":true}'
+  -d '{"session_id":"xxx","text":"Hello","interrupt":true}'
 ```
 
-## 4. SDK 包
+## 4. SDK Packages
 
-如不希望直接调 REST，可使用以下 SDK：
+If you'd rather not call REST directly, use these SDKs:
 
-| 生态 | 包名 |
+| Ecosystem | Package |
 |:---|:---|
 | npm   | `@trtc/voice-agent-sdk` |
 | maven | `com.tencent.trtc:voice-agent-sdk` |
 | pypi  | `trtc-voice-agent` |
 
-> SDK 版本与骨架 manifest 对齐；当前 Phase 2 阶段以 REST 为准。
+> SDK versions align with skeleton manifest; in Phase 2, REST is authoritative.
 
-## 5. 安全合规
+## 5. Security Compliance
 
-- **HTTPS**：生产环境强制启用。
-- **SecretKey 不下发**：骨架仅向客户端下发 `user_sig`（带 TTL），不暴露 `SDKSecretKey`。
-- **日志脱敏**：骨架自带 `RedactingFilter`，反向代理层也应禁止打印 Authorization 头。
+- **HTTPS**: Enforce in production.
+- **SecretKey not sent to client**: The skeleton only sends `user_sig` (with TTL) to the client; never exposes `SDKSecretKey`.
+- **Log redaction**: The skeleton includes a built-in `RedactingFilter`; the reverse proxy layer should also suppress Authorization header logging.

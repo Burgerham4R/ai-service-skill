@@ -1,8 +1,8 @@
-"""I/O 模态配置与降级策略（conversation-core 内置）。
+"""I/O modality configuration and degradation strategy (conversation-core built-in).
 
-四个通道（语音输入/语音输出/文本输入/文本输出）独立可配。
-某通道服务不可用时，按本模块声明的策略自动降级到可用通道，
-保障会话连续性。
+Four channels (voice input / voice output / text input / text output) are independently configurable.
+When a channel service is unavailable, the system automatically degrades to an available channel
+according to the strategy declared in this module, ensuring session continuity.
 """
 from __future__ import annotations
 
@@ -58,14 +58,14 @@ class IoModality:
         }
 
     def resolve_input_channel(self, voice_available: bool) -> Channel:
-        """返回当前应使用的输入通道，按 enabled + 服务可用性决策。"""
+        """Return the input channel to use, based on enabled status + service availability."""
         if self.voice_input.enabled and voice_available:
             return Channel.VOICE_INPUT
         if self.voice_input.fallback and self.text_input.enabled:
             return Channel.TEXT_INPUT
         if self.text_input.enabled:
             return Channel.TEXT_INPUT
-        # 边界场景：所有输入通道均不可用 -> 上层进入静默等待
+        # Edge case: all input channels unavailable -> upper layer enters silent wait
         raise RuntimeError("no usable input channel")
 
     def resolve_output_channel(self, voice_available: bool) -> Channel:
@@ -79,7 +79,7 @@ class IoModality:
 
 
 def from_dict(data: dict) -> IoModality:
-    """从 manifest.yaml 的 io_modality 节构造 IoModality 实例。"""
+    """Construct IoModality instance from the io_modality section of manifest.yaml."""
     if not data:
         return IoModality()
 

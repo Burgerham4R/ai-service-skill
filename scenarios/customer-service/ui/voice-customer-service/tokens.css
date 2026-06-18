@@ -1,7 +1,7 @@
 /*
- * 自动生成自 design_tokens.json —— **禁止手改**
- * 编译命令：python3 -m scripts.lib.tokens_compile
- * 命名规范见 scenarios/customer-service/ui/design-system/DESIGN_GUIDELINES.md §2.1
+ * Auto-generated from design_tokens.json —— **DO NOT EDIT**
+ * Build command: python3 -m scripts.lib.tokens_compile
+ * Naming convention: see scenarios/customer-service/ui/design-system/DESIGN_GUIDELINES.md §2.1
  */
 
 :root {

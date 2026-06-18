@@ -1,22 +1,22 @@
-# python-backend 适配器
+# python-backend Adapter
 
-将 conversation-core 骨架以反向代理形式接入 Python 后端。
+Connect the conversation-core skeleton as a reverse proxy into a Python backend.
 
-| 框架 | 模板 | 默认目标 |
+| Framework | Template | Default Target |
 |:---|:---|:---|
 | Flask    | `flask.py.tpl`    | `voice_agent_proxy.py` (Blueprint) |
 | FastAPI  | `fastapi.py.tpl`  | `voice_agent_proxy.py` (APIRouter) |
 | Django   | `django.py.tpl`   | `voice_agent_proxy/views.py` (function view) |
 
-## 配置
+## Configuration
 
-| 环境变量 | 默认 | 说明 |
+| Env Variable | Default | Description |
 |:---|:---|:---|
-| `SKELETON_BASE_URL` | `http://localhost:3000` | 骨架地址 |
-| `API_PREFIX`        | `/api/v1`             | 骨架前缀 |
-| `ROUTE_PREFIX`      | `/voice-agent`         | 自身挂载路径 |
+| `SKELETON_BASE_URL` | `http://localhost:3000` | Skeleton address |
+| `API_PREFIX`        | `/api/v1`             | Skeleton prefix |
+| `ROUTE_PREFIX`      | `/voice-agent`         | Self-mounting path |
 
-## 注意
+## Notes
 
-- Django 模板使用了 `@csrf_exempt`，仅适合反向代理场景；如需 CSRF，自行接入 DRF。
-- FastAPI 模板基于 `httpx.AsyncClient`，可与骨架的异步链路对齐。
+- The Django template uses `@csrf_exempt`, suitable only for reverse proxy scenarios; for CSRF support, integrate DRF separately.
+- The FastAPI template is based on `httpx.AsyncClient`, aligning with the skeleton's async pipeline.

@@ -1,9 +1,9 @@
 <!doctype html>
-<html lang="zh-CN">
+<html lang="en">
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-  <title>AI 客服</title>
+  <title>AI Customer Service</title>
   <!-- 与 conversation-core/server.py 的 StaticFiles 挂载点对齐：/static/* -->
   <link rel="stylesheet" href="/static/tokens.css" />
   <link rel="stylesheet" href="/static/styles.css" />
@@ -23,7 +23,7 @@
     </defs>
   </svg>
 
-  <!-- ===== Landing 占位区（宿主网站可整体替换）===== -->
+  <!-- ===== Landing placeholder area (host site can replace entirely) ===== -->
   <header class="page-header">
     <div class="page-header__inner">
       <div class="brand-mark" aria-hidden="true">
@@ -31,16 +31,16 @@
         <span class="brand-mark__name" data-role="brand-name">Customer Service</span>
       </div>
       <nav class="page-nav">
-        <a class="page-nav__link" href="/static/admin/" target="_blank" rel="noopener" data-role="nav-admin" hidden>坐席看板</a>
-        <a class="page-nav__link" href="/docs" target="_blank" rel="noopener">API 文档</a>
+        <a class="page-nav__link" href="/static/admin/" target="_blank" rel="noopener" data-role="nav-admin" hidden>Agent Board</a>
+        <a class="page-nav__link" href="/docs" target="_blank" rel="noopener">API Docs</a>
       </nav>
     </div>
   </header>
 
   <main class="page-main">
     <section class="page-hero">
-      <h1 class="page-hero__title" data-role="hero-title">您的产品介绍区</h1>
-      <p class="page-hero__lead" data-role="hero-lead">右下角是 AI 客服浮窗。点开后会真正接通 AI 对话（语音 / 文字），并按已启用的能力提供转人工、工具调用等交互。</p>
+      <h1 class="page-hero__title" data-role="hero-title">Your Product Showcase Area</h1>
+      <p class="page-hero__lead" data-role="hero-lead">The AI customer service widget is in the bottom-right corner. Click to open and connect to a real AI conversation (voice / text), with handoff, tool calling, and other interactions based on enabled capabilities.</p>
       <div class="page-hero__hint" data-role="health-summary">
         <span class="led" data-led="tencent_cloud" data-status="unknown"></span>
         <span class="led-label">Tencent Cloud</span>
@@ -48,35 +48,35 @@
         <span class="led-label">TRTC</span>
         <span class="led" data-led="llm" data-status="unknown"></span>
         <span class="led-label">LLM</span>
-        <button class="btn btn--ghost btn--small" type="button" id="btn-recheck">重新自检</button>
+        <button class="btn btn--ghost btn--small" type="button" id="btn-recheck">Recheck</button>
       </div>
     </section>
   </main>
 
   <!-- ===== 浮窗 ===== -->
   <div class="widget widget--collapsed" id="cs-widget" aria-live="polite">
-    <button class="widget-launcher" type="button" id="widget-launcher" aria-label="打开 AI 客服">
+    <button class="widget-launcher" type="button" id="widget-launcher" aria-label="Open AI Customer Service">
       <svg class="icon" width="22" height="22"><use href="#icon-bubble"/></svg>
-      <span class="widget-launcher__label">在线客服</span>
+      <span class="widget-launcher__label">Online Support</span>
     </button>
 
-    <section class="widget-panel" role="dialog" aria-label="AI 客服" aria-modal="false">
+    <section class="widget-panel" role="dialog" aria-label="AI Customer Service" aria-modal="false">
       <header class="widget-panel__head">
         <div class="widget-panel__brand">
           <span class="widget-panel__logo" aria-hidden="true"></span>
           <div class="widget-panel__title">
-            <strong data-role="panel-title">AI 客服</strong>
-            <span class="widget-panel__sub" data-role="status-text">正在接通…</span>
+            <strong data-role="panel-title">AI Customer Service</strong>
+            <span class="widget-panel__sub" data-role="status-text">Connecting…</span>
           </div>
         </div>
         <div class="widget-panel__actions">
-          <button class="icon-btn" type="button" id="btn-mic" title="麦克风" aria-label="麦克风" hidden>
+          <button class="icon-btn" type="button" id="btn-mic" title="Microphone" aria-label="Microphone" hidden>
             <svg class="icon" width="18" height="18"><use href="#icon-mic-off" id="mic-icon-use"/></svg>
           </button>
-          <button class="icon-btn" type="button" id="btn-handoff" title="转人工 / Talk to agent" aria-label="转人工" hidden>
+          <button class="icon-btn" type="button" id="btn-handoff" title="Talk to agent" aria-label="Talk to agent" hidden>
             <svg class="icon" width="18" height="18"><use href="#icon-users"/></svg>
           </button>
-          <button class="icon-btn" type="button" id="btn-collapse" title="收起" aria-label="收起">
+          <button class="icon-btn" type="button" id="btn-collapse" title="Collapse" aria-label="Collapse">
             <svg class="icon" width="18" height="18"><use href="#icon-collapse"/></svg>
           </button>
         </div>
@@ -86,14 +86,14 @@
 
       <aside class="handoff-banner" id="handoff-banner" hidden>
         <span class="handoff-banner__dot"></span>
-        <span class="handoff-banner__text" id="handoff-text">正在为您接通人工…</span>
-        <button class="btn btn--ghost btn--small" type="button" id="btn-cancel-handoff">取消排队</button>
+        <span class="handoff-banner__text" id="handoff-text">Connecting you to an agent…</span>
+        <button class="btn btn--ghost btn--small" type="button" id="btn-cancel-handoff">Cancel</button>
       </aside>
 
       <footer class="widget-panel__foot">
         <form class="composer" id="composer" autocomplete="off">
-          <input class="composer__input" id="composer-input" type="text" maxlength="256" placeholder="请输入您的问题…" aria-label="消息输入" disabled />
-          <button class="icon-btn icon-btn--primary" type="submit" id="btn-send" title="发送" aria-label="发送" disabled>
+          <input class="composer__input" id="composer-input" type="text" maxlength="256" placeholder="Type your message…" aria-label="Message input" disabled />
+          <button class="icon-btn icon-btn--primary" type="submit" id="btn-send" title="Send" aria-label="Send" disabled>
             <svg class="icon" width="18" height="18"><use href="#icon-send"/></svg>
           </button>
         </form>
@@ -101,7 +101,7 @@
     </section>
   </div>
 
-  <!-- TRTC Web SDK v5 + 共享接通核心 + 浮窗逻辑 -->
+  <!-- TRTC Web SDK v5 + shared connection core + widget logic -->
   <script src="https://web.sdk.qcloud.com/trtc/webrtc/v5/dist/trtc.js"></script>
   <script src="/static/agent-link.js"></script>
   <script src="/static/app.js" defer></script>

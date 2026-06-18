@@ -1,14 +1,14 @@
-# digital-human 能力包自描述清单
-# 类型: capability（预留占位）
+# digital-human capability self-describing manifest
+# Type: capability (reserved placeholder)
 #
-# Phase 2 目标：仅声明 manifest，提供"接入接口契约"，
-# 实际渲染 / 口型同步 / 表情驱动等渲染层实现交给后续迭代。
-# 该包注入到骨架后不做任何代码注入，仅暴露 REST 端点占位。
+# Phase 2 goal: only declare manifest, provide "integration interface contract";
+# actual rendering / lip-sync / expression driving etc. deferred to future iterations.
+# After injection into skeleton, this package does no code injection, only exposes REST endpoint stubs.
 
 name: "digital-human"
 version: "0.1.0"
 type: "capability"
-description: "数字人能力包占位（渲染 / 口型同步 / 表情驱动）。仅声明接口契约，未启用渲染层"
+description: "Digital human capability placeholder (rendering / lip-sync / expression driving). Only declares interface contract; rendering layer not enabled"
 
 dependencies:
   - name: "conversation-core"
@@ -27,25 +27,25 @@ extensions:
 
 config:
   enabled:
-    description: "是否启用（占位实现，默认 false 避免误用）"
+    description: "Whether to enable (stub implementation, defaults to false to avoid accidental use)"
     default: false
   avatar_id:
-    description: "默认数字人形象 ID（接入第三方渲染服务时使用）"
+    description: "Default digital human avatar ID (used when integrating third-party rendering service)"
     default: ""
   lipsync_provider:
-    description: "口型同步提供方占位"
+    description: "Lip-sync provider placeholder"
     default: "tencent-cloud-vmp"
   expression_provider:
-    description: "表情驱动提供方占位"
+    description: "Expression driving provider placeholder"
     default: "internal-rule"
 
 endpoints:
   - method: GET
     path: /api/v1/digital-human/status
-    description: 返回占位状态与未来计划
+    description: Returns placeholder status and future plans
   - method: POST
     path: /api/v1/digital-human/render
-    description: 渲染接口契约（当前返回 501 Not Implemented）
+    description: Rendering interface contract (currently returns 501 Not Implemented)
 
 integration:
   mode: "manual"
@@ -60,5 +60,5 @@ security:
     patterns: ["api_key", "token"]
 
 acceptance:
-  - "manifest 通过 manifest_resolver 校验（依赖 / 注入点合法）"
-  - "REST 占位接口返回明确的 'not implemented' 标记"
+  - "Manifest passes manifest_resolver validation (dependencies / injection points valid)"
+  - "REST stub endpoints return explicit 'not implemented' marker"

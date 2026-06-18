@@ -1,8 +1,8 @@
-"""knowledge-base 能力包：FAQ 检索 + 关键词匹配。
+"""knowledge-base capability: FAQ retrieval + keyword matching.
 
-最小实现：
-- 数据源：本地 JSON 文件（可热重载）
-- 匹配：关键词加权计分 + 可选 TF-IDF（停用词过滤）
-- 不引入任何外部依赖，纯 Python 实现
+Minimal implementation:
+- Data source: local JSON file (hot-reloadable)
+- Matching: keyword weighted scoring + optional TF-IDF (stop-word filtering)
+- Zero external dependencies, pure Python implementation
 """
 __version__ = "1.0.0"

@@ -1,11 +1,11 @@
-"""写回 sink 工厂 —— 按 env SS_ADAPTER 选择实现（与 KB/handoff factory 范式一致）。
+"""Write-back sink factory — selects implementation by env SS_ADAPTER (consistent with KB/handoff factory paradigm).
 
-    SS_ADAPTER=mock         默认；无外部依赖
-    SS_ADAPTER=local_json   写本地 JSONL
-    SS_ADAPTER=default_rest  POST 到真实 CRM（需 SS_REST_BASE_URL）
+    SS_ADAPTER=mock         Default; no external dependencies
+    SS_ADAPTER=local_json   Write local JSONL
+    SS_ADAPTER=default_rest POST to real CRM (requires SS_REST_BASE_URL)
 
-任意实现初始化失败（如 default_rest 缺 base_url）时，安全降级回 mock，
-保证 finalize 流程永不因写回目标不可用而中断。
+When any implementation initialization fails (e.g. default_rest missing base_url), safely degrades to mock,
+ensuring the finalize flow is never interrupted due to unavailable write-back targets.
 """
 from __future__ import annotations
 
@@ -36,7 +36,7 @@ def _build(name: str) -> SummarySink:
 
 
 def get_sink() -> SummarySink:
-    """返回当前配置的写回 sink（按 SS_ADAPTER 缓存；env 变化时重建）。"""
+    """Return the currently configured write-back sink (cached by SS_ADAPTER; rebuilds on env change)."""
     global _instance, _instance_key
     key = (os.getenv("SS_ADAPTER", "mock") or "mock").strip().lower()
     with _lock:

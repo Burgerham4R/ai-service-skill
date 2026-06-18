@@ -1,20 +1,21 @@
-"""三把 Key 验证函数下沉模块（Phase 3 阶段 5 新增）。
+"""Three-key validation function module (Phase 3 Stage 5).
 
-设计目的：
-- 让 ``scripts/setup-credentials.py``（开发者交互式 fallback）和
-  ``scripts/verify-credentials.py``（AI 主导无参数验证）共享同一套验证函数。
-- 验证逻辑本体来自 ``capabilities/conversation-core/src/health.py``，
-  本模块仅做"凭证装载 + 结果归一化为 JSON"。
+Design purpose:
+- Share the same validation functions between ``scripts/setup-credentials.py``
+  (developer interactive fallback) and ``scripts/verify-credentials.py``
+  (AI-driven credential-less validation).
+- The validation logic itself comes from ``capabilities/conversation-core/src/health.py``;
+  this module only handles "credential loading + result normalization to JSON."
 
-核心 API：
+Core API:
 - ``validate_tencent(env)`` / ``validate_trtc(env, deep=True)`` / ``validate_llm(env)``
-  → 统一返回 ``ValidationResult`` dataclass，可 ``to_dict()`` 序列化为
-    ``{ok, type, error, message, latency_ms}``。
+  → All return a ``ValidationResult`` dataclass that can be serialized via ``to_dict()``
+    to ``{ok, type, error, message, latency_ms}``.
 
-安全约束（务必遵守）：
-- 全过程**只从 .env / 进程 env 读取凭证**，不接受命令行参数明文传 Key。
-- 输出 JSON 中**不包含**凭证原文；error 字段只放错误码 / 简短消息。
-- 调用方（CLI / AI）应将 stdout 视为可解析 JSON，不在终端显式回显 Key。
+Security constraints (must follow):
+- The entire process **only reads credentials from .env / process env**, never accepts keys via CLI arguments.
+- Output JSON **does not contain** credential plaintext; the error field only holds error codes / brief messages.
+- The caller (CLI / AI) should treat stdout as parseable JSON and not echo keys in the terminal.
 """
 from __future__ import annotations
 
@@ -26,7 +27,7 @@ from pathlib import Path
 from typing import Dict, Iterable, List, Optional
 
 # ---------------------------------------------------------------------------
-# 1) 加载 conversation-core 的凭证 / 健康检查模块
+# 1) Load conversation-core credential / health check modules
 # ---------------------------------------------------------------------------
 _HERE = Path(__file__).resolve().parent
 _ROOT = _HERE.parent.parent
@@ -35,7 +36,7 @@ _CORE_DIR = _ROOT / "capabilities" / "conversation-core"
 if str(_CORE_DIR) not in sys.path:
     sys.path.insert(0, str(_CORE_DIR))
 
-# 延迟导入：供 verify-credentials.py 在 .env 已加载之后调用
+# Lazy imports: for verify-credentials.py to call after .env is loaded
 def _imports():
     from src.credentials import (  # type: ignore  # noqa: WPS433
         LlmCredential,
@@ -61,28 +62,28 @@ def _imports():
 
 
 # ---------------------------------------------------------------------------
-# 2) 错误码 → AI 应答提示（与 SKILL.md §7.5 对照表对齐）
+# 2) Error codes → AI response hints (aligned with SKILL.md §5.5 lookup table)
 # ---------------------------------------------------------------------------
 _ERROR_HINTS: Dict[str, str] = {
-    "E001": "腾讯云 SecretId/SecretKey 验证失败（AuthFailure / 账号未开通 STS）。",
-    "E002": "TRTC 应用凭据验证失败（SDKAppID 不属于本账号 / SDKSecretKey 不匹配）。",
-    "E003": "LLM 验证失败（鉴权 401/403 或返回非 200）。",
-    "E004": "网络不可达 / 超时（请检查代理 / 防火墙）。",
-    "E000": "凭证未配置或为空。",
+    "E001": "Tencent Cloud SecretId/SecretKey verification failed (AuthFailure / STS not enabled on account).",
+    "E002": "TRTC app credentials verification failed (SDKAppID does not belong to this account / SDKSecretKey mismatch).",
+    "E003": "LLM verification failed (auth 401/403 or non-200 response).",
+    "E004": "Network unreachable / timeout (check proxy / firewall).",
+    "E000": "Credential not configured or empty.",
 }
 
 
 # ---------------------------------------------------------------------------
-# 3) 统一返回结构
+# 3) Unified return structures
 # ---------------------------------------------------------------------------
 @dataclass
 class ValidationResult:
-    """单把 Key 的验证结果，序列化后即 verify-credentials.py 的 stdout JSON。"""
+    """Validation result for a single key, serialized as verify-credentials.py stdout JSON."""
 
     ok: bool
     type: str  # "tencent" | "trtc" | "llm" | "all"
-    error: str = ""           # 错误码（E000~E004 或空字符串）
-    message: str = ""         # 人类可读说明（不含 Key 原文）
+    error: str = ""           # Error code (E000~E004 or empty)
+    message: str = ""         # Human-readable description (no key plaintext)
     latency_ms: int = 0
 
     def to_dict(self) -> Dict:
@@ -97,7 +98,7 @@ class ValidationResult:
 
 @dataclass
 class BatchResult:
-    """整体验证结果（type=all 时使用）。"""
+    """Aggregate validation result (used when type=all)."""
 
     ok: bool
     items: List[ValidationResult] = field(default_factory=list)
@@ -111,13 +112,13 @@ class BatchResult:
 
 
 # ---------------------------------------------------------------------------
-# 4) .env 加载（独立于 dotenv，避免引入额外依赖）
+# 4) .env loading (independent of dotenv, avoids extra dependencies)
 # ---------------------------------------------------------------------------
 def load_dotenv(env_path: Optional[Path] = None) -> Dict[str, str]:
-    """读 ``.env`` 到 ``os.environ``，返回新增/覆盖的键值对。
+    """Read ``.env`` into ``os.environ``; returns newly added/overwritten key-value pairs.
 
-    路径优先级：参数 > capabilities/conversation-core/.env > 仓库根 .env。
-    不抛异常；找不到文件时返回空字典。
+    Path priority: parameter > capabilities/conversation-core/.env > repo root .env.
+    Does not raise; returns empty dict if no file found.
     """
     candidates: List[Path] = []
     if env_path is not None:
@@ -151,10 +152,10 @@ def load_dotenv(env_path: Optional[Path] = None) -> Dict[str, str]:
 
 
 # ---------------------------------------------------------------------------
-# 5) 单把 Key 验证函数
+# 5) Single-key validation functions
 # ---------------------------------------------------------------------------
 def validate_tencent() -> ValidationResult:
-    """验证腾讯云 API SecretId/SecretKey。"""
+    """Validate Tencent Cloud API SecretId/SecretKey."""
     mods = _imports()
     creds = mods["load_from_env"]()
     tc = creds.tencent_cloud
@@ -163,7 +164,7 @@ def validate_tencent() -> ValidationResult:
             ok=False,
             type="tencent",
             error="E000",
-            message="TENCENT_CLOUD_SECRET_ID / TENCENT_CLOUD_SECRET_KEY 未配置",
+            message="TENCENT_CLOUD_SECRET_ID / TENCENT_CLOUD_SECRET_KEY not configured",
         )
     r = mods["check_tencent_cloud"](tc)
     return ValidationResult(
@@ -176,10 +177,11 @@ def validate_tencent() -> ValidationResult:
 
 
 def validate_trtc(deep: bool = True) -> ValidationResult:
-    """验证 TRTC SDKAppId / SDKSecretKey。
+    """Validate TRTC SDKAppId / SDKSecretKey.
 
-    deep=True 时若腾讯云 API 凭据已配置，会调用 ``DescribeTRTCRealTimeQualityData``
-    做归属校验；否则仅做本地 UserSig 自洽检查。
+    When deep=True and Tencent Cloud API credentials are configured, calls
+    ``DescribeTRTCRealTimeQualityData`` for ownership verification;
+    otherwise only does local UserSig self-consistency check.
     """
     mods = _imports()
     creds = mods["load_from_env"]()
@@ -190,7 +192,7 @@ def validate_trtc(deep: bool = True) -> ValidationResult:
             ok=False,
             type="trtc",
             error="E000",
-            message="TRTC_SDK_APP_ID / TRTC_SDK_SECRET_KEY 未配置",
+            message="TRTC_SDK_APP_ID / TRTC_SDK_SECRET_KEY not configured",
         )
     r = mods["check_trtc"](trtc, tencent=tc if (tc and tc.configured) else None)
     return ValidationResult(
@@ -203,7 +205,7 @@ def validate_trtc(deep: bool = True) -> ValidationResult:
 
 
 def validate_llm() -> ValidationResult:
-    """验证 LLM API Key（OpenAI 兼容协议）。"""
+    """Validate LLM API Key (OpenAI-compatible protocol)."""
     mods = _imports()
     creds = mods["load_from_env"]()
     llm = creds.llm
@@ -212,7 +214,7 @@ def validate_llm() -> ValidationResult:
             ok=False,
             type="llm",
             error="E000",
-            message="LLM_API_KEY / LLM_API_URL / LLM_MODEL 未配置",
+            message="LLM_API_KEY / LLM_API_URL / LLM_MODEL not configured",
         )
     r = mods["check_llm"](llm)
     return ValidationResult(
@@ -225,20 +227,20 @@ def validate_llm() -> ValidationResult:
 
 
 def validate_all() -> BatchResult:
-    """依次验证三把 Key；任一失败 → ok=False。"""
+    """Validate all three keys sequentially; any failure → ok=False."""
     items = [validate_tencent(), validate_trtc(deep=True), validate_llm()]
     return BatchResult(ok=all(i.ok for i in items), items=items)
 
 
 # ---------------------------------------------------------------------------
-# 6) 错误码 → 提示（供 CLI 在非 --json 模式下打印，AI 不读这段）
+# 6) Error code → hint (for CLI non-JSON mode; AI does not read this)
 # ---------------------------------------------------------------------------
 def hint(error_code: str) -> str:
     return _ERROR_HINTS.get(error_code, "")
 
 
 # ---------------------------------------------------------------------------
-# 7) 自检：让 `python -m scripts.lib.credential_validators` 可独立运行
+# 7) Self-test: allows `python -m scripts.lib.credential_validators` to run independently
 # ---------------------------------------------------------------------------
 def _self_test() -> int:
     load_dotenv()

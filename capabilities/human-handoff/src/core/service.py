@@ -1,7 +1,7 @@
-"""HandoffService —— 串联 IntentDetector 与 HandoffClient 的应用服务。
+"""HandoffService — Application service chaining IntentDetector with HandoffClient.
 
-只依赖 ports（HandoffClient 接口），不感知具体后端实现。
-切换 adapter 仅需重新注入 client（adapters.factory.set_client）。
+Only depends on ports (HandoffClient interface), does not know the specific backend implementation.
+Switching adapter only requires re-injecting client (adapters.factory.set_client).
 """
 from __future__ import annotations
 
@@ -14,7 +14,7 @@ from .models import OverallStatus, Ticket, TicketStatus, TicketStatusEnum
 
 
 class HandoffService:
-    """转人工业务服务。"""
+    """Handoff business service."""
 
     def __init__(
         self,
@@ -26,16 +26,16 @@ class HandoffService:
         self._detector = detector or get_default_detector()
 
     # ------------------------------------------------------------------
-    # 意图检测 + 触发（供注入到 conversation-core.before_push_text）
+    # Intent detection + trigger (for injection into conversation-core.before_push_text)
     # ------------------------------------------------------------------
     def maybe_handoff(self, session_id: str, text: str) -> Optional[str]:
-        """识别转人工意图，命中则申请工单并返回拼装的话术；否则返回 None。"""
+        """Recognize handoff intent; if matched, request ticket and return assembled script; otherwise return None."""
         if not session_id or not text:
             return None
         if not self._detector.is_handoff_intent(text):
             return None
 
-        # 复用已有工单（同一 user 进行中的不重复创建）
+        # Reuse existing ticket (don't duplicate for same user in progress)
         existing = self._client.get_or_attach(session_id)
         if existing is not None and existing.status in (
             TicketStatusEnum.PENDING.value,
@@ -49,7 +49,7 @@ class HandoffService:
             description=text[:512],
             priority="normal",
         )
-        # 建单即附带会话纪要，便于坐席在看板里立刻掌握客户问题（session-summary 未装则 no-op）
+        # Attach session summary at ticket creation so agents can immediately see the issue on the dashboard (no-op if session-summary is not installed)
         attach_summary_to_ticket(ticket)
         return self._render_handoff_message(ticket)
 
@@ -58,21 +58,21 @@ class HandoffService:
         if t.status == TicketStatusEnum.PROCESSING.value:
             return (
                 f"[handoff state=connected agent={t.agent_id}]\n"
-                "您已接通人工座席，请稍等。"
+                "You are now connected to a human agent. Please wait a moment."
             )
         if t.status == TicketStatusEnum.PENDING.value:
             return (
                 f"[handoff state=waiting position={t.queue_position} "
                 f"eta={t.eta_seconds}s]\n"
-                f"已为您申请人工座席，当前排在第 {t.queue_position} 位，"
-                f"预计等待 {t.eta_seconds} 秒。"
+                f"You are number {t.queue_position} in the agent queue, "
+                f"estimated wait {t.eta_seconds} seconds."
             )
         if t.status == TicketStatusEnum.TIMEOUT.value:
-            return "[handoff state=timeout]\n人工座席暂无空闲，请稍后重试。"
+            return "[handoff state=timeout]\nNo agents are currently available. Please try again later."
         return None
 
     # ------------------------------------------------------------------
-    # 显式操作（供 router 调用）
+    # Explicit operations (for router calls)
     # ------------------------------------------------------------------
     def request(
         self,
@@ -94,13 +94,13 @@ class HandoffService:
             description=(description or reason or "")[:512],
             priority="normal",
         )
-        # 建单即附带会话纪要（session-summary 未装则 no-op，不影响主流程）
+        # Attach session summary at ticket creation (no-op if session-summary not installed; does not affect main flow)
         attach_summary_to_ticket(ticket)
         return ticket
 
     def connect(self, session_id: str, agent_id: str) -> Ticket:
-        """供 /api/v1/handoff/connect 使用：把 session 强制接通到指定 agent。"""
-        # 先按 user_id 反查活跃工单
+        """For /api/v1/handoff/connect: force-connect a session to a specified agent."""
+        # Look up active ticket by user_id first
         ticket = self._client.get_or_attach(session_id)
         if ticket is None:
             raise ValueError(f"session {session_id} not waiting")
@@ -131,7 +131,7 @@ class HandoffService:
         return self._client.overall_status()
 
     # ------------------------------------------------------------------
-    # 看板辅助
+    # Dashboard helpers
     # ------------------------------------------------------------------
     def list_tickets(
         self,
@@ -155,13 +155,13 @@ class HandoffService:
 
 
 # ---------------------------------------------------------------------------
-# 默认 service 单例
+# Default service singleton
 # ---------------------------------------------------------------------------
 _default_service: Optional[HandoffService] = None
 
 
 def get_default_service() -> HandoffService:
-    """按当前环境构造 service 单例（client 来自 adapters.factory）。"""
+    """Build service singleton from current environment (client from adapters.factory)."""
     global _default_service
     if _default_service is None:
         from ..adapters.factory import get_client

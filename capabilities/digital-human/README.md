@@ -1,31 +1,31 @@
-# digital-human · 数字人能力包（占位）
+# digital-human · Digital Human Capability (Placeholder)
 
-> Phase 2 仅声明接口契约。渲染 / 口型同步 / 表情驱动等渲染层实现
-> 留待后续迭代（Phase 3+）。
+> Phase 2 only declares the interface contract. Rendering / lip-sync / expression driving
+> and other rendering layer implementations are deferred to future iterations (Phase 3+).
 
-## 当前能力
+## Current Capabilities
 
-- 通过 manifest 注册占位 REST 端点：`/api/v1/digital-human/*`
-- 不修改骨架运行时行为，仅作为后续渲染层的对接锚点
+- Register placeholder REST endpoints via manifest: `/api/v1/digital-human/*`
+- Does not modify skeleton runtime behavior; only serves as an integration anchor for the future rendering layer
 
-## REST 占位
+## REST Placeholders
 
-| 方法 | 路径 | 行为 |
+| Method | Path | Behavior |
 |:---|:---|:---|
-| GET  | `/api/v1/digital-human/status` | 返回当前形态 / 路线图 |
-| POST | `/api/v1/digital-human/render` | 固定返回 `501 Not Implemented` |
+| GET  | `/api/v1/digital-human/status` | Returns current status / roadmap |
+| POST | `/api/v1/digital-human/render` | Always returns `501 Not Implemented` |
 
-## 路线图
+## Roadmap
 
-1. 接入第三方渲染 SDK（Avatar / Lipsync / Expression）
-2. 通过 WebRTC datachannel 推送渲染驱动数据
-3. 与 `conversation-core` 的 TTS 输出帧对齐
+1. Integrate third-party rendering SDKs (Avatar / Lipsync / Expression)
+2. Push rendering driver data via WebRTC datachannel
+3. Align frame output with conversation-core TTS
 
-## 配置
+## Configuration
 
-| 环境变量 | 默认 | 说明 |
+| Env Variable | Default | Description |
 |:---|:---|:---|
-| `DH_ENABLED` | `false` | 真实启用前请保持 false 避免误用 |
-| `DH_AVATAR_ID` | _(空)_ | 形象 ID |
-| `DH_LIPSYNC_PROVIDER` | `tencent-cloud-vmp` | 口型同步提供方 |
-| `DH_EXPRESSION_PROVIDER` | `internal-rule` | 表情驱动提供方 |
+| `DH_ENABLED` | `false` | Keep false before real enablement to avoid accidental use |
+| `DH_AVATAR_ID` | _(empty)_ | Avatar ID |
+| `DH_LIPSYNC_PROVIDER` | `tencent-cloud-vmp` | Lip-sync provider |
+| `DH_EXPRESSION_PROVIDER` | `internal-rule` | Expression driver provider |

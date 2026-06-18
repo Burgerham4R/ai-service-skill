@@ -1,4 +1,4 @@
-"""human-handoff adapter 实现。"""
+"""human-handoff adapter implementations."""
 from .factory import build_default, get_client, reset_client, set_client
 
 __all__ = [

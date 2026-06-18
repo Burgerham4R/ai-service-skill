@@ -1,4 +1,4 @@
-"""knowledge-base core 模块。"""
+"""knowledge-base core module."""
 from .models import FaqEntry, KbStats, SearchHit
 from .service import KbService, get_default_service, reset_default_service
 

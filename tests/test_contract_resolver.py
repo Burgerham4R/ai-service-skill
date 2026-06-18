@@ -32,7 +32,7 @@ _KB_DIR = _ROOT / "capabilities" / "knowledge-base"
 
 
 class LoadBusinessContractTests(unittest.TestCase):
-    """读取真实 manifest，验证字段解析正确。"""
+    """Read real manifests and verify correct field parsing."""
 
     def test_load_human_handoff_outbound_apis(self):
         bc = load_business_contract(_HH_DIR)
@@ -40,11 +40,11 @@ class LoadBusinessContractTests(unittest.TestCase):
         self.assertTrue(bc.port_class.endswith("HandoffClient"))
         outs = bc.outbound_apis()
         names = {a.name for a in outs}
-        # 至少包含三条 outbound 工单接口
+        # At least three outbound ticket APIs
         self.assertIn("ticket.create", names)
         self.assertIn("ticket.status_query", names)
         self.assertIn("ticket.cancel", names)
-        # inbound 接口不应混进 outbound
+        # Inbound APIs should not mix into outbound
         for a in outs:
             self.assertEqual(a.direction, "outbound")
 
@@ -52,7 +52,7 @@ class LoadBusinessContractTests(unittest.TestCase):
         bc = load_business_contract(_KB_DIR)
         self.assertEqual(bc.capability, "knowledge-base")
         names = {a.name for a in bc.outbound_apis()}
-        # 至少含 faq.search
+        # At least faq.search
         self.assertIn("faq.search", names)
 
     def test_get_api_lookup(self):
@@ -69,12 +69,12 @@ class LoadBusinessContractTests(unittest.TestCase):
         self.assertEqual(ctx.exception.code, "BC000")
 
     def test_validate_manifest_runs(self):
-        # validate_manifest 不应抛 fatal；BC004 warning 允许出现（数组类型 slot 路径可能命中 hits[]）
+        # validate_manifest must not raise fatal; BC004 warnings are allowed (array-type slot paths may hit hits[])
         warnings_hh = validate_manifest(_HH_DIR)
         self.assertIsInstance(warnings_hh, list)
         warnings_kb = validate_manifest(_KB_DIR)
         self.assertIsInstance(warnings_kb, list)
-        # warning 字符串应以 BC 编号开头
+        # Warning strings should start with BC prefix
         for w in warnings_hh + warnings_kb:
             self.assertTrue(w.startswith("BC"), w)
 
@@ -108,7 +108,7 @@ class DiffContractsTests(unittest.TestCase):
         )
 
     def test_l1_when_same_field_names(self):
-        """字段同名同类型 + method/path 一致 → L1。"""
+        """Same field names + same types + method/path match → L1."""
         user = self._make_user(
             request_schema={
                 "user_id": "string",
@@ -123,7 +123,7 @@ class DiffContractsTests(unittest.TestCase):
         self.assertEqual(decide_level(diff), DegradeLevel.L1)
 
     def test_l1_when_slot_rename(self):
-        """subject → title（同义词，落在 adapter_slots 内）→ 仍是 L1。"""
+        """subject → title (synonym, inside adapter_slots) → still L1."""
         user = self._make_user(
             request_schema={
                 "user_id": "string",
@@ -135,12 +135,12 @@ class DiffContractsTests(unittest.TestCase):
         )
         diff = diff_contracts(self.api, user)
         self.assertEqual(decide_level(diff), DegradeLevel.L1)
-        # 必须出现一条 rename 记录（subject → title），且落在 slot 内
+        # Must have a rename record (subject → title) that is in-slot
         renames = [f for f in diff.fields if f.kind == "rename"]
         self.assertTrue(any(f.in_slot and "subject" in f.path for f in renames))
 
     def test_l2_when_out_of_slot_rename(self):
-        """user_id → customer_id（同义词，但 user_id 不在 adapter_slots） → L2。"""
+        """user_id → customer_id (synonym, but user_id not in adapter_slots) → L2."""
         user = self._make_user(
             request_schema={
                 "customer_id": "string",   # user_id 重命名（不在 slot）
@@ -161,14 +161,14 @@ class DiffContractsTests(unittest.TestCase):
         self.assertEqual(decide_level(diff), DegradeLevel.L3)
 
     def test_l3_when_raw_body_format(self):
-        """body_format=raw（非 JSON）→ protocol_mismatch → L3。"""
+        """body_format=raw (non-JSON) → protocol_mismatch → L3."""
         user = self._make_user(body_format="raw")
         diff = diff_contracts(self.api, user)
         self.assertTrue(diff.protocol_mismatch)
         self.assertEqual(decide_level(diff), DegradeLevel.L3)
 
     def test_response_missing_does_not_block_l1(self):
-        """用户没贴响应 → 不计入 protocol/L2/L3 障碍。"""
+        """User did not provide response → not counted as a protocol/L2/L3 obstacle."""
         user = self._make_user(
             request_schema={
                 "user_id": "string",

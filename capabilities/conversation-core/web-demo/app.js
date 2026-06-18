@@ -1,8 +1,8 @@
 /* TRTC Conversational AI · Web Demo
- * 连通性自检（health）→ 申请房间凭据（get_config）→ TRTC enterRoom + 拉起 AI
- * 字幕来自 TRTC 自定义消息：type=10000（字幕）、type=10001（AI 状态）
- * 用户文字消息端侧发给 AI bot：sendCustomMessage(cmdId:2, type:20000)
- *   → AI 把它当作"用户说的话"回应（语音 + 字幕）
+ * Health check → request room credentials (get_config) → TRTC enterRoom + start AI
+ * Subtitles come from TRTC custom messages: type=10000 (subtitle), type=10001 (AI state)
+ * User text messages sent to the AI bot: sendCustomMessage(cmdId:2, type:20000)
+ *   → AI treats it as "user speech" and responds (voice + subtitle)
  */
 (function () {
   'use strict';

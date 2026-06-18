@@ -1,19 +1,19 @@
-# 通用后端集成指南（L2 半自动）
+# Generic Backend Integration Guide (L2 Semi-Auto)
 
-> 当 Agent 已识别到你的后端技术栈，但自动渲染失败时，参考以下步骤完成集成。
-> 核心思路：在你的 Web 框架中挂载一个反向代理路由，把 `${ROUTE_PREFIX}/*`
-> 透传到骨架进程的 `${API_PREFIX}/*`。
+> When the Agent has identified your backend tech stack but auto-rendering failed, follow these steps to complete the integration.
+> Core idea: mount a reverse proxy route in your web framework that transparently forwards `${ROUTE_PREFIX}/*`
+> to the skeleton process's `${API_PREFIX}/*`.
 
-## 1. 部署 conversation-core 骨架
+## 1. Deploy conversation-core Skeleton
 
 ```bash
 cd capabilities/conversation-core
-python -m src.server     # 默认监听 0.0.0.0:3000
+python -m src.server     # Default listens on 0.0.0.0:3000
 ```
 
-## 2. 复制反向代理模板
+## 2. Copy Reverse Proxy Template
 
-| 框架 | 模板 |
+| Framework | Template |
 |:---|:---|
 | Express   | `auto_adapters/node-backend/express.js.tpl` |
 | Koa       | `auto_adapters/node-backend/koa.js.tpl` |
@@ -24,22 +24,22 @@ python -m src.server     # 默认监听 0.0.0.0:3000
 | FastAPI   | `auto_adapters/python-backend/fastapi.py.tpl` |
 | Django    | `auto_adapters/python-backend/django.py.tpl` |
 
-替换占位变量（`${SKELETON_BASE_URL}` / `${API_PREFIX}` / `${ROUTE_PREFIX}`）。
+Replace placeholder variables (`${SKELETON_BASE_URL}` / `${API_PREFIX}` / `${ROUTE_PREFIX}`).
 
-## 3. 注册路由
+## 3. Register Route
 
-按模板顶部 `install_hint` 描述把 router / filter / blueprint 挂到你的应用入口。
+Mount the router / filter / blueprint in your app entry point as described in the template's `install_hint`.
 
-## 4. 安全核对
+## 4. Security Checklist
 
-- **HTTPS**：生产环境强制启用。
-- **SSRF**：骨架地址不应直接来自用户输入；如需对接内网骨架，先在用户明确确认后再放开。
-- **请求体限制**：默认 `64KB`，避免大包冲击 ASR/LLM 链路。
-- **鉴权**：在反向代理中可植入鉴权逻辑（JWT / API Key），骨架本身只信任反向代理来源。
+- **HTTPS**: Enforce in production.
+- **SSRF**: The skeleton address must not come directly from user input; if connecting to an internal network skeleton, first confirm with the user explicitly.
+- **Request Body Limit**: Default `64KB`, preventing large payloads from overwhelming the ASR/LLM pipeline.
+- **Auth**: Inject auth logic (JWT / API Key) in the reverse proxy; the skeleton itself only trusts requests from the reverse proxy source.
 
-## 5. 验证
+## 5. Verify
 
 ```bash
 curl -s http://localhost:8000${ROUTE_PREFIX}/health | jq .status
-# 期望: "ok"
+# Expected: "ok"
 ```

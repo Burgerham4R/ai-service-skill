@@ -1,72 +1,72 @@
-# knowledge-base 接口适配 SOP
+# knowledge-base Interface Adaptation SOP
 
-> 当用户已有的知识库 / FAQ / 检索系统接口与本能力包默认契约不一致时，按本文档分场景操作。
-> 推荐统一通过 `python scripts/contract-adapt.py knowledge-base` 自动生成，本文档为手工兜底。
+> When the user's existing knowledge base / FAQ / retrieval system API diverges from this capability's default contract, follow this document for scenario-specific operations.
+> Recommended: use `python scripts/contract-adapt.py knowledge-base` for automated generation; this document is the manual fallback.
 
 ---
 
-## 1. 默认契约速览
+## 1. Default Contract Overview
 
-本能力包**调用**用户知识库的接口（outbound）：
+This capability **calls** the user's knowledge base interfaces (outbound):
 
-| 契约名 | 方法 | 路径 | 用途 |
+| Contract | Method | Path | Purpose |
 |---|---|---|---|
-| `faq.search`  | POST   | `/faq/search`        | 关键词检索 |
-| `faq.list`    | GET    | `/faq`               | 列出全部条目 |
-| `faq.upsert`  | POST   | `/faq`               | 新增 / 更新 |
-| `faq.delete`  | DELETE | `/faq/{entry_id}`    | 删除条目 |
+| `faq.search`  | POST   | `/faq/search`        | Keyword search |
+| `faq.list`    | GET    | `/faq`               | List all entries |
+| `faq.upsert`  | POST   | `/faq`               | Create / update |
+| `faq.delete`  | DELETE | `/faq/{entry_id}`    | Delete entry |
 
-完整字段定义见 `manifest.yaml` 的 `business_contract.external_apis`。
+Full field definitions in `manifest.yaml` `business_contract.external_apis`.
 
 ---
 
-## 2. 三层防御机制
+## 2. Three-Layer Defense Mechanism
 
-| 层级 | 落点 | 适用场景 |
+| Layer | Artifact Location | Applicable Scenario |
 |---|---|---|
-| **L1 字段映射** | 仅字段名 / 简单类型差异 | 90% 的常见情况 |
-| **L2 适配子类** | 鉴权 / 路径 / 错误码差异 | 用户自有 KB 系统 |
-| **L3 完整自定义实现** | 协议级差异（向量库 / GraphQL / gRPC） | 非 REST 协议 |
+| **L1 Field Mapping** | Only field name / simple type differences | 90% of common cases |
+| **L2 Adapter Subclass** | Auth / path / error code differences | User's own KB system |
+| **L3 Full Custom Implementation** | Protocol-level differences (vector DB / GraphQL / gRPC) | Non-REST protocols |
 
-均落到 `capabilities/knowledge-base/src/adapters/user_custom.py`，并通过 `KB_ADAPTER=user_custom` 启用。
+All layers land in `capabilities/knowledge-base/src/adapters/user_custom.py` and are enabled via `KB_ADAPTER=user_custom`.
 
 ---
 
-## 3. L1 字段映射（最常见）
+## 3. L1 Field Mapping (most common)
 
-### 3.1 适用判定
+### 3.1 Applicability Check
 
-- 用户接口仍是 REST + JSON
-- 仅字段名差异（在 `adapter_slots` 范围内）
+- User API is still REST + JSON
+- Only field name differences (within `adapter_slots` scope)
 
-### 3.2 操作步骤
+### 3.2 Steps
 
-**Step 1**：贴出用户的 curl 或 OpenAPI
+**Step 1**: Paste user's curl or OpenAPI
 
 ```bash
 curl -X POST https://kb.example.com/api/v3/search \
   -H 'X-Api-Key: xxx' \
   -d '{
-    "keyword": "退款",
+    "keyword": "refund",
     "limit": 3
   }'
-# 响应:
+# Response:
 # {
 #   "results": [
-#     { "doc_id": "k001", "title": "如何退款", "content": "...", "tags": ["退款"], "relevance": 0.92 }
+#     { "doc_id": "k001", "title": "How to refund", "content": "...", "tags": ["refund"], "relevance": 0.92 }
 #   ]
 # }
 ```
 
-**Step 2**：写映射表 `capabilities/knowledge-base/src/adapters/user_custom_mapping.yaml`
+**Step 2**: Write mapping table `capabilities/knowledge-base/src/adapters/user_custom_mapping.yaml`
 
 ```yaml
 faq.search:
   request:
-    query:  keyword              # 字段名映射
+    query:  keyword              # Field name mapping
     top_k:  limit
   response:
-    # response 是数组形式，转换器需要把 results[] 映射到 hits[]
+    # response is array form; transformer needs to map results[] to hits[]
     hits:   results
     "hits[].entry.id":       "results[].doc_id"
     "hits[].entry.question": "results[].title"
@@ -76,14 +76,14 @@ faq.search:
 
 faq.list:
   response:
-    items: data                  # 用户用 data 不用 items
+    items: data                  # User uses data not items
     "items[].id":       "data[].doc_id"
     "items[].question": "data[].title"
     "items[].answer":   "data[].content"
     "items[].keywords": "data[].tags"
 ```
 
-**Step 3**：生成 adapter
+**Step 3**: Generate adapter
 
 ```bash
 python scripts/contract-adapt.py knowledge-base \
@@ -92,7 +92,7 @@ python scripts/contract-adapt.py knowledge-base \
   --mapping capabilities/knowledge-base/src/adapters/user_custom_mapping.yaml
 ```
 
-**Step 4**：启用
+**Step 4**: Enable
 
 ```bash
 export KB_ADAPTER=user_custom
@@ -102,15 +102,15 @@ export KB_REST_TOKEN=<your-api-key>
 
 ---
 
-## 4. L2 适配子类（认证 / 路径风格差异）
+## 4. L2 Adapter Subclass (auth / path style differences)
 
-### 4.1 适用判定
+### 4.1 Applicability Check
 
-- 鉴权方式非 Bearer（如 `X-Api-Key`、签名鉴权）
-- 路径模板不同
-- 响应包装层级不同（如 `{ code, msg, data: { ... } }`）
+- Auth method is not Bearer (e.g. `X-Api-Key`, signature-based auth)
+- Different path templates
+- Different response wrapping (e.g. `{ code, msg, data: { ... } }`)
 
-### 4.2 模板代码
+### 4.2 Template Code
 
 ```python
 # capabilities/knowledge-base/src/adapters/user_custom.py
@@ -121,12 +121,12 @@ from .default_rest import DefaultRestKbClient
 
 
 class UserCustomKbClient(DefaultRestKbClient):
-    """用户自有 KB 系统适配器（L2）。"""
+    """User's own KB system adapter (L2)."""
 
     def _headers(self) -> dict:
         h = {"Content-Type": "application/json"}
         if self._token:
-            h["X-Api-Key"] = self._token       # 不是 Bearer
+            h["X-Api-Key"] = self._token       # Not Bearer
         return h
 
     def search(
@@ -139,10 +139,10 @@ class UserCustomKbClient(DefaultRestKbClient):
         if not query.strip():
             return []
         payload = {
-            "keyword": query,                  # 字段重映射
+            "keyword": query,                  # Field remapping
             "limit": int(top_k or 3),
         }
-        # 用户接口路径不同
+        # User API path is different
         data = self._post("/api/v3/search", payload)
         results = data.get("results", []) if isinstance(data, dict) else (data or [])
         hits: List[SearchHit] = []
@@ -190,15 +190,15 @@ def from_env() -> Optional["UserCustomKbClient"]:
 
 ---
 
-## 5. L3 完整自定义（向量库 / GraphQL / gRPC）
+## 5. L3 Full Custom (vector DB / GraphQL / gRPC)
 
-### 5.1 适用判定
+### 5.1 Applicability Check
 
-- 用户使用向量数据库（Milvus / Pinecone / Qdrant）做语义检索
-- 用户使用 GraphQL 而非 REST
-- 用户使用 gRPC
+- User uses vector database (Milvus / Pinecone / Qdrant) for semantic search
+- User uses GraphQL instead of REST
+- User uses gRPC
 
-### 5.2 模板代码（向量库示例）
+### 5.2 Template Code (vector DB example)
 
 ```python
 # capabilities/knowledge-base/src/adapters/user_custom.py
@@ -209,16 +209,16 @@ from ..ports.kb_client import KnowledgeBaseClient
 
 
 class UserCustomKbClient(KnowledgeBaseClient):
-    """向量库适配器示例（L3：直接实现 KnowledgeBaseClient）。"""
+    """Vector DB adapter example (L3: directly implements KnowledgeBaseClient)."""
 
     def __init__(self, **kwargs):
-        # TODO 初始化向量库 client：
+        # TODO Initialize vector DB client:
         # self._milvus = MilvusClient(uri=...)
         # self._embedder = SentenceTransformer(...)
         ...
 
     def search(self, query, *, top_k=None, min_score=None) -> List[SearchHit]:
-        # TODO 调用 embedder + 向量检索
+        # TODO Call embedder + vector retrieval
         # vec = self._embedder.encode(query)
         # results = self._milvus.search(vec, top_k=top_k or 3)
         results = []
@@ -231,11 +231,11 @@ class UserCustomKbClient(KnowledgeBaseClient):
         ]
 
     def list_all(self) -> List[FaqEntry]:
-        # TODO 向量库不一定支持枚举；返回空或抛 NotSupported
+        # TODO Vector DBs may not support enumeration; return empty or raise NotSupported
         return []
 
     def upsert(self, entry: FaqEntry) -> FaqEntry:
-        # TODO 写入向量
+        # TODO Write vectors
         return entry
 
     def delete(self, entry_id: str) -> bool:
@@ -256,42 +256,42 @@ def from_env():
 
 ---
 
-## 6. 切换 / 验证
+## 6. Switch / Verify
 
-### 6.1 启用 user_custom
+### 6.1 Enable user_custom
 
 ```bash
 export KB_ADAPTER=user_custom
-# 重启服务后生效
+# Takes effect after service restart
 ```
 
-### 6.2 单元自检
+### 6.2 Unit Self-Check
 
 ```bash
 python -c "
 from capabilities.knowledge_base.src.adapters.factory import build_default
 c = build_default()
 print('adapter:', type(c).__name__)
-hits = c.search('退款')
+hits = c.search('refund')
 for h in hits:
     print(' ', h.score, h.entry.question)
 "
 ```
 
-### 6.3 端到端
+### 6.3 End-to-End
 
 ```bash
 curl -X POST http://localhost:3000/api/v1/kb/search \
   -H 'Content-Type: application/json' \
-  -d '{"query":"退款","top_k":3}'
+  -d '{"query":"refund","top_k":3}'
 ```
 
 ---
 
-## 7. 安全清单
+## 7. Security Checklist
 
-- [ ] `KB_REST_BASE_URL` 必须使用 https://（localhost 例外）
-- [ ] 默认拒绝私网地址
-- [ ] 鉴权 token 仅来自环境变量
-- [ ] 用户上传 FAQ 内容时通过 `_strip_html` 清洗（router 已内置）
-- [ ] 远程异常不打印响应体
+- [ ] `KB_REST_BASE_URL` must use https:// (localhost excepted)
+- [ ] Default reject private network addresses
+- [ ] Auth token only from environment variables
+- [ ] User-uploaded FAQ content sanitized via `_strip_html` (built into router)
+- [ ] Remote exceptions do not print response bodies

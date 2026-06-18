@@ -1,12 +1,12 @@
-"""adapter 工厂：根据环境变量挑选 KnowledgeBaseClient 实现。
+"""adapter factory: selects KnowledgeBaseClient implementation based on environment variable.
 
-环境变量 `KB_ADAPTER`：
-    local_json    默认本地 JSON 文件检索（生产可用，零依赖）
-    mock          内置示例 FAQ（用于 Recipe 录视频）
-    default_rest  按 business_contract 默认契约调用远程 FAQ 服务
-    user_custom   用户接入向导生成的实现
+Environment variable `KB_ADAPTER`:
+    local_json    Default local JSON file search (production-ready, zero dependencies)
+    mock          Built-in demo FAQ (for Recipe video recording)
+    default_rest  Call remote FAQ service per business_contract default contract
+    user_custom   User integration wizard generated implementation
 
-未设置或值非法时，回退到 local_json（保留与 Phase 2 的行为兼容）。
+When not set or invalid, fall back to local_json (keeps behavior compatibility with Phase 2).
 """
 from __future__ import annotations
 
@@ -76,7 +76,7 @@ def get_client() -> KnowledgeBaseClient:
 
 
 def set_client(client: KnowledgeBaseClient) -> None:
-    """仅供测试用：注入自定义 client。"""
+    """For testing only: inject a custom client."""
     global _singleton
     _singleton = client
 

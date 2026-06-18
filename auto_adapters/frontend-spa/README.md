@@ -1,27 +1,27 @@
-# frontend-spa 适配器
+# frontend-spa Adapter
 
-> 把 conversation-core 骨架的 REST 接入到任意前端 SPA。
-> Agent 在 L1 阶段会按当前 `tech_stack` 选择子目录的模板渲染并写入用户项目。
+> Connect the conversation-core skeleton REST API to any frontend SPA.
+> The Agent selects the appropriate subdirectory template based on the current `tech_stack` during the L1 phase and renders it into the user's project.
 
-| tech_stack | 模板 | 默认目标 |
+| tech_stack | Template | Default Target |
 |:---|:---|:---|
 | react / next | `react/VoiceAgent.tsx.tpl` | `src/components/${COMPONENT_NAME}.tsx` |
 | vue          | `vue/VoiceAgent.vue.tpl`   | `src/components/${COMPONENT_NAME}.vue` |
 | angular      | `angular/voice-agent.component.ts.tpl` | `src/app/voice-agent/voice-agent.component.ts` |
 
-## 安装依赖（由 Agent 写入 package.json）
+## Dependency Installation (written by Agent into package.json)
 
 - `trtc-sdk-v5 >= 5.0.0`
 
-## 安全
+## Security
 
-- 模板中 fetch 使用 `${SKELETON_BASE_URL}`，生产环境必须替换为 HTTPS 地址（骨架 manifest `security.network.enforce_https = true`）。
-- TRTC SDK 需要 wss 通道；CSP 中允许：
+- Templates use `${SKELETON_BASE_URL}` for fetch; in production this must be replaced with an HTTPS address (skeleton manifest `security.network.enforce_https = true`).
+- TRTC SDK requires a wss channel; allow in CSP:
   ```
   connect-src https://${SKELETON_BASE_URL} wss://*.trtc.tencent-cloud.com;
   ```
 
-## 与能力包叠加
+## Capability Overlay
 
-- 已安装 `tool-calling`：在 `Send` 框中输入 `/tool xxx {...}` 即触发本地工具调用。
-- 已安装 `human-handoff`：发送"转人工"等关键字即触发排队接通流程。
+- With `tool-calling` installed: type `/tool xxx {...}` in the Send box to trigger local tool calls.
+- With `human-handoff` installed: sending keywords like "talk to agent" triggers the queue-and-connect flow.

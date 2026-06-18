@@ -1,15 +1,15 @@
 /* ===== Voice AI Customer Service · Main Application =====
  *
- * 连接 TRTC Conversational AI 后端，实现：
- *   1. 点击 Start → get_config → TRTC 入房 → agent/start
- *   2. 左侧卡片 → 发送文本给 AI → TTS 回复
- *   3. Human Support → handoff/request → 排队动画 → 模拟接通
+ * Connects to the TRTC Conversational AI backend to implement:
+ *   1. Click Start → get_config → TRTC enterRoom → agent/start
+ *   2. Left-side cards → send text to AI → TTS reply
+ *   3. Human Support → handoff/request → queue animation → simulated connection
  *
- * TRTC 自定义消息协议（与 conversation-core 对齐）:
- *   发送 (client → bot):  cmdId=2, data 为 JSON 经 TextEncoder 编码的 ArrayBuffer
- *     type=20000 文本注入, type=20001 打断
- *   接收 (bot → client):  经 TextDecoder 解码 JSON
- *     type=10000 字幕(payload.text/end/roundid), type=10001 状态(payload.state)
+ * TRTC custom message protocol (aligned with conversation-core):
+ *   Send (client → bot):  cmdId=2, data is JSON encoded as ArrayBuffer via TextEncoder
+ *     type=20000 text injection, type=20001 interrupt
+ *   Receive (bot → client): JSON decoded via TextDecoder
+ *     type=10000 subtitle (payload.text/end/roundid), type=10001 state (payload.state)
  */
 (function() {
   'use strict';

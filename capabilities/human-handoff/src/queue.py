@@ -1,14 +1,14 @@
-"""queue.py —— 兼容 facade。
+"""queue.py — compatibility facade.
 
-保留 `attach_session` 公共符号，供 manifest.extensions（agent.after_start）
-继续以 `_hh_queue.attach_session(session_id, info=...)` 调用。
+Keeps the `attach_session` public symbol for manifest.extensions (agent.after_start)
+to continue calling as `_hh_queue.attach_session(session_id, info=...)`.
 
-旧版本同时暴露的 `get_queue()` / `HandoffQueue` / `HandoffRecord` / `HandoffState`
-在新分层下不再使用；保留为废弃 shim，仅用于第三方代码的渐进式迁移。
+Old version's `get_queue()` / `HandoffQueue` / `HandoffRecord` / `HandoffState`
+are no longer used under the new architecture; kept as deprecated shims for gradual migration of third-party code.
 
-新代码请直接使用：
-- adapters.factory.get_client()    获取 HandoffClient 实例
-- core.service.get_default_service() 获取 HandoffService 实例
+New code should use directly:
+- adapters.factory.get_client()    Get HandoffClient instance
+- core.service.get_default_service() Get HandoffService instance
 """
 from __future__ import annotations
 
@@ -16,7 +16,7 @@ import warnings
 from typing import Any
 
 from .adapters.factory import get_client
-from .core.models import (  # noqa: F401  (向后兼容导出)
+from .core.models import (  # noqa: F401  (backward compatible export)
     OverallStatus,
     Ticket,
     TicketStatus,
@@ -25,19 +25,19 @@ from .core.models import (  # noqa: F401  (向后兼容导出)
 
 
 def attach_session(session_id: str, info: Any = None) -> None:
-    """供 conversation-core.after_start 注入点使用。
+    """For conversation-core.after_start injection point use.
 
-    在重构后的实现下，"会话登记"由 client 在 create_ticket 时按需完成；
-    此处保留为 no-op 入口，避免破坏 manifest.extensions 的旧调用。
-    info 参数预留以兼容旧签名。
+    Under the refactored implementation, "session registration" is done by client on create_ticket as needed;
+    kept here as a no-op entry point to avoid breaking old calls from manifest.extensions.
+    info parameter reserved for compatibility with old signature.
     """
-    # 触发 client 单例初始化，便于在启动阶段尽早暴露配置错误
+    # Trigger client singleton init to surface config errors early during startup
     _ = get_client()
     return None
 
 
 # --------------------------------------------------------------------
-# 弃用 shim（仅供旧测试 / 旧外部代码渐进迁移；新代码不应依赖）
+# Deprecated shim (for old tests / old external code gradual migration only; new code should not depend)
 # --------------------------------------------------------------------
 def get_queue():
     warnings.warn(
@@ -49,7 +49,7 @@ def get_queue():
     return get_client()
 
 
-# 旧符号别名（部分集成方可能直接 import）
+# Old symbol aliases (some integrators may directly import)
 HandoffState = TicketStatusEnum
 HandoffRecord = Ticket
 

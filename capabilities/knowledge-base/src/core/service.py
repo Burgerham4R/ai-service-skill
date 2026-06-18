@@ -1,6 +1,6 @@
-"""KbService —— 应用服务层，组合 KnowledgeBaseClient 与"指令拼接"逻辑。
+"""KbService — Application service layer, combining KnowledgeBaseClient with instruction concatenation logic.
 
-只依赖 ports（KnowledgeBaseClient 接口），不感知具体后端。
+Only depends on ports (KnowledgeBaseClient interface); does not know the specific backend.
 """
 from __future__ import annotations
 
@@ -41,7 +41,7 @@ class KbService:
         return self._client.reload()
 
     # ------------------------------------------------------------------
-    # 用于注入到 conversation-core.before_start：把检索结果拼接到 instructions
+    # For injection into conversation-core.before_start: concatenate search results into instructions
     # ------------------------------------------------------------------
     def attach_faq_to_instructions(
         self,

@@ -1,15 +1,15 @@
-# java-backend 适配器
+# java-backend Adapter
 
-将 conversation-core 骨架以 Filter 形式接入 Spring Boot / Quarkus 项目。
+Connect the conversation-core skeleton as a Filter into Spring Boot / Quarkus projects.
 
-| 框架 | 模板 | 默认目标 |
+| Framework | Template | Default Target |
 |:---|:---|:---|
 | Spring Boot | `springboot/VoiceAgentFilter.java.tpl` | `src/main/java/com/example/voiceagent/VoiceAgentFilter.java` |
-| Quarkus     | `quarkus/VoiceAgentFilter.java.tpl`    | 同上 |
+| Quarkus     | `quarkus/VoiceAgentFilter.java.tpl`    | Same as above |
 
-## 配置
+## Configuration
 
-`application.yml` / `application.properties`：
+`application.yml` / `application.properties`:
 
 ```yaml
 skeleton:
@@ -18,8 +18,8 @@ skeleton:
   route-prefix: ${ROUTE_PREFIX}
 ```
 
-## 注意
+## Notes
 
-- 模板中 `package com.example.voiceagent` 由 Agent 在 L1 渲染时根据用户项目实际包名替换。
-- 默认 `connectTimeout=3s`、`request timeout=10s`，可按需调整。
-- Spring Boot 注册 `voiceAgentFilter` 顺序为 10，应早于业务 Filter。
+- The template package `com.example.voiceagent` is replaced by the Agent during L1 rendering based on the user's actual project package name.
+- Default `connectTimeout=3s`, `request timeout=10s`; adjustable as needed.
+- Spring Boot registers `voiceAgentFilter` with order 10; should be placed before business Filters.

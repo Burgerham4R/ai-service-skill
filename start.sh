@@ -1,20 +1,20 @@
 #!/usr/bin/env bash
 # =====================================================================
-# conversation-core · 启动脚本（瘦身版 / Phase 3 阶段 5）
+# conversation-core · Launch script (slim / Phase 3 Stage 5)
 #
-# 假设：.env 已存在（由 AI 主持收集 Key 并写入；或开发者跑
-#       `python scripts/setup-credentials.py` 兜底完成）。
-# 仅做四件事：
-#   1. 检测 Python ≥ 3.9
-#   2. 创建 / 复用 venv（不污染全局环境）
-#   3. 安装 / 校验依赖（清华镜像优先，失败 fallback 官方源）
-#   4. 启动 FastAPI uvicorn（HTTP；--https 走自签证书）
+# Assumes: .env already exists (key collection & writing hosted by AI;
+#          or developer runs `python scripts/setup-credentials.py` as fallback).
+# Does only four things:
+#   1. Detect Python ≥ 3.9
+#   2. Create / reuse venv (does not pollute global environment)
+#   3. Install / verify dependencies (Tsinghua mirror first, fallback to official source)
+#   4. Launch FastAPI uvicorn (HTTP; --https uses self-signed cert)
 #
-# 用法：
-#   ./start.sh                  # HTTP 启动（默认端口 3000）
-#   ./start.sh --https          # HTTPS 启动（自签）
-#   ./start.sh --rebuild        # 强制重建 venv
-#   ./start.sh --port 8080      # 自定义端口
+# Usage:
+#   ./start.sh                  # HTTP launch (default port 3000)
+#   ./start.sh --https          # HTTPS launch (self-signed)
+#   ./start.sh --rebuild        # Force venv rebuild
+#   ./start.sh --port 8080      # Custom port
 # =====================================================================
 set -e
 
@@ -42,13 +42,13 @@ while [ $# -gt 0 ]; do
         --https)   USE_HTTPS=1 ;;
         --port)    shift; PORT="$1" ;;
         --help|-h) sed -n '2,18p' "${BASH_SOURCE[0]}" | sed 's/^# \{0,1\}//'; exit 0 ;;
-        *) warn "忽略未知参数: $1" ;;
+        *) warn "Ignoring unknown argument: $1" ;;
     esac
     shift
 done
 
-# ---------------- Step 1: 前置检查 ----------------
-[ -f "$ENV_FILE" ] || die ".env 不存在: $ENV_FILE\n  请先在 Coding Agent 中按 SKILL.md §7 完成三把 Key 配置；\n  或开发者兜底：python3 scripts/setup-credentials.py"
+# ---------------- Step 1: Prerequisites ----------------
+[ -f "$ENV_FILE" ] || die ".env not found: $ENV_FILE\n  Please first complete the 3-key configuration in the Coding Agent per SKILL.md §7;\n  or developer fallback: python3 scripts/setup-credentials.py"
 
 PY_CMD=""
 for cand in python3.12 python3.11 python3.10 python3.9 python3 python; do
@@ -60,50 +60,50 @@ for cand in python3.12 python3.11 python3.10 python3.9 python3 python; do
         fi
     fi
 done
-[ -z "$PY_CMD" ] && die "未检测到 Python ≥ ${MIN_PY_MAJOR}.${MIN_PY_MINOR}"
+[ -z "$PY_CMD" ] && die "No Python ≥ ${MIN_PY_MAJOR}.${MIN_PY_MINOR} detected"
 
 # ---------------- Step 2: venv ----------------
-[ "$REBUILD" -eq 1 ] && [ -d "$VENV_DIR" ] && { warn "重建 venv..."; rm -rf "$VENV_DIR"; }
+[ "$REBUILD" -eq 1 ] && [ -d "$VENV_DIR" ] && { warn "Rebuilding venv..."; rm -rf "$VENV_DIR"; }
 NEED_INSTALL=0
 if [ ! -d "$VENV_DIR" ]; then
-    log "创建虚拟环境..."
-    "$PY_CMD" -m venv "$VENV_DIR" || die "venv 创建失败（Linux 可能需 apt install python3-venv）"
+    log "Creating virtual environment..."
+    "$PY_CMD" -m venv "$VENV_DIR" || die "venv creation failed (Linux may need: apt install python3-venv)"
     NEED_INSTALL=1
 fi
 # shellcheck disable=SC1091
 source "$VENV_DIR/bin/activate"
 VENV_PY="$VENV_DIR/bin/python"; VENV_PIP="$VENV_DIR/bin/pip"
 
-# ---------------- Step 3: 依赖 ----------------
+# ---------------- Step 3: Dependencies ----------------
 [ "$NEED_INSTALL" -eq 0 ] && ! "$VENV_PY" -c "import fastapi, uvicorn, requests, dotenv, pydantic" 2>/dev/null && NEED_INSTALL=1
 if [ "$NEED_INSTALL" -eq 1 ]; then
-    log "安装依赖..."
+    log "Installing dependencies..."
     "$VENV_PIP" install --upgrade pip >/dev/null 2>&1 || true
     if "$VENV_PIP" install -r "$REQUIREMENTS" -i "https://pypi.tuna.tsinghua.edu.cn/simple" --timeout 15 >/dev/null 2>&1; then
-        ok "依赖安装完成（清华镜像）"
+        ok "Dependencies installed (Tsinghua mirror)"
     else
-        warn "镜像源失败，切换官方源..."
-        "$VENV_PIP" install -r "$REQUIREMENTS" >/dev/null || die "依赖安装失败"
-        ok "依赖安装完成（官方源）"
+        warn "Mirror source failed, switching to official source..."
+        "$VENV_PIP" install -r "$REQUIREMENTS" >/dev/null || die "Dependency installation failed"
+        ok "Dependencies installed (official source)"
     fi
-else ok "依赖已就绪"; fi
+else ok "Dependencies ready"; fi
 
-# ---------------- Step 4: 启动 ----------------
+# ---------------- Step 4: Launch ----------------
 SSL_ARGS=""
 if [ "$USE_HTTPS" -eq 1 ]; then
     CERT_DIR="$SCRIPT_DIR/certs"; CERT_FILE="$CERT_DIR/cert.pem"; KEY_FILE="$CERT_DIR/key.pem"
     if [ ! -f "$CERT_FILE" ] || [ ! -f "$KEY_FILE" ]; then
-        command -v openssl >/dev/null 2>&1 || die "openssl 未安装"
+        command -v openssl >/dev/null 2>&1 || die "openssl not installed"
         mkdir -p "$CERT_DIR"
         openssl req -x509 -newkey rsa:2048 -nodes -keyout "$KEY_FILE" -out "$CERT_FILE" \
             -days 365 -subj "/CN=localhost" -addext "subjectAltName=DNS:localhost,IP:127.0.0.1" 2>/dev/null
-        ok "自签证书已生成"
+        ok "Self-signed certificate generated"
     fi
     SSL_ARGS="--ssl-keyfile $KEY_FILE --ssl-certfile $CERT_FILE"
 fi
 
 SCHEME="http"; [ "$USE_HTTPS" -eq 1 ] && SCHEME="https"
-printf "%b🚀 启动 conversation-core: %s://localhost:%s%b (Ctrl+C 停止)\n" "$GREEN" "$SCHEME" "$PORT" "$NC"
+printf "%b🚀 Launching conversation-core: %s://localhost:%s%b (Ctrl+C to stop)\n" "$GREEN" "$SCHEME" "$PORT" "$NC"
 
 cd "$CORE_DIR"
 export HOST="${HOST:-0.0.0.0}"; export PORT="$PORT"

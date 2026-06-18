@@ -1,9 +1,9 @@
-"""Phase 3 阶段 6：scenarios/* recipe 静态校验 + 路径 B Jinja 模板渲染测试。
+"""Phase 3 Stage 6: scenarios/* recipe static validation + Path B Jinja template rendering tests.
 
-覆盖目标：
-- 路径 A：scenarios/customer-service/recipe.yaml 结构合法且关键字段就位
-- 路径 B：output-templates/recipe.yaml.j2 用 4 组典型 Q1~Q4 答复渲染后，产物是合法 YAML 且字段联动正确
-- ui_overlay 引用的子目录 widget-floating / admin-board 都真实存在
+Coverage targets:
+- Path A: scenarios/customer-service/recipe.yaml has valid structure and key fields present
+- Path B: output-templates/recipe.yaml.j2 rendered with 4 typical Q1~Q4 answer sets produces valid YAML with correct field linkage
+- ui_overlay referenced subdirectories widget-floating / admin-board all physically exist
 """
 from __future__ import annotations
 
@@ -22,7 +22,7 @@ _TEMPLATE = _SCEN / "custom-builder" / "output-templates" / "recipe.yaml.j2"
 
 
 class CustomerServiceRecipeTests(unittest.TestCase):
-    """路径 A 默认 recipe 静态结构校验。"""
+    """Path A default recipe static structure validation."""
 
     def setUp(self):
         self.assertTrue(_RECIPE_A.exists(), f"recipe.yaml not found: {_RECIPE_A}")
@@ -37,7 +37,7 @@ class CustomerServiceRecipeTests(unittest.TestCase):
         names = {c["name"] for c in installs}
         self.assertIn("knowledge-base", names)
         self.assertIn("human-handoff", names)
-        # adapter 字段必须显式给出（开箱体验靠 mock / local_queue）
+        # adapter field must be explicitly given (out-of-box experience relies on mock / local_queue)
         for c in installs:
             self.assertIn("adapter", c)
             self.assertIn("env", c)
@@ -65,7 +65,7 @@ class CustomerServiceRecipeTests(unittest.TestCase):
 
 
 # ---------------------------------------------------------------------------
-# 路径 B：Jinja2 模板渲染（若 Jinja2 不可用则降级为字符串子串校验）
+# Path B: Jinja2 template rendering (falls back to substring checks if Jinja2 unavailable)
 # ---------------------------------------------------------------------------
 try:
     import jinja2  # type: ignore
@@ -75,7 +75,7 @@ except ImportError:  # pragma: no cover
 
 
 class CustomBuilderTemplateStructureTests(unittest.TestCase):
-    """模板的关键 Jinja 分支字面量必须存在（不依赖 Jinja2 引擎）。"""
+    """The key Jinja branch literals must exist in the template (does not depend on Jinja2 engine)."""
 
     def setUp(self):
         self.assertTrue(_TEMPLATE.exists(), f"template not found: {_TEMPLATE}")
@@ -126,16 +126,16 @@ class CustomBuilderTemplateRenderTests(unittest.TestCase):
         )
         data = yaml.safe_load(out)
         self.assertEqual(data["apiVersion"], "ai-customer-service/v1")
-        # Q2 联动
+        # Q2 linkage
         self.assertFalse(data["runtime_modality"]["voice_input"])
         self.assertTrue(data["runtime_modality"]["voice_output"])
         # Q3 联动
         self.assertTrue(data["ui"]["overlay_required"])
-        # 没勾 human-handoff → admin-board 层不存在
+        # human-handoff not selected → admin-board layer not present
         layer_sources = [l["source"] for l in data["ui"]["ui_overlay"]["layers"]]
         self.assertIn("widget-floating", layer_sources)
         self.assertNotIn("admin-board", layer_sources)
-        # Q4：仅 knowledge-base 装入
+        # Q4: only knowledge-base installed
         installed_names = {c["name"] for c in data["capabilities"]["install"]}
         self.assertEqual(installed_names, {"knowledge-base"})
 
@@ -150,7 +150,7 @@ class CustomBuilderTemplateRenderTests(unittest.TestCase):
         data = yaml.safe_load(out)
         self.assertTrue(data["runtime_modality"]["voice_input"])
         self.assertTrue(data["runtime_modality"]["text_input"])
-        # 勾了 human-handoff → admin-board 层应当存在
+        # human-handoff selected → admin-board layer should exist
         layer_sources = [l["source"] for l in data["ui"]["ui_overlay"]["layers"]]
         self.assertIn("admin-board", layer_sources)
         installed_names = {c["name"] for c in data["capabilities"]["install"]}
@@ -167,7 +167,7 @@ class CustomBuilderTemplateRenderTests(unittest.TestCase):
         data = yaml.safe_load(out)
         self.assertFalse(data["ui"]["overlay_required"])
         self.assertIsNone(data["ui"]["ui_overlay"])
-        # 用户未勾任何能力 → install 列表为空
+        # User selected no capabilities → install list is empty
         self.assertEqual(data["capabilities"]["install"], [])
 
 

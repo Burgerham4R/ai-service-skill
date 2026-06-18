@@ -1,16 +1,16 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-"""三把 Key 交互式配置脚本。
+"""3-Key interactive configuration script.
 
-特性：
-  1. 每把 Key 输入后立即执行连通性自检，失败不进入下一把。
-  2. 已通过验证的 Key 会被写入 .credentials_cache（权限 600），
-     重新执行时自动跳过，支持断点续配（idempotent）。
-  3. 最终产物：项目根目录下的 `.env` 文件（权限 600）+ config-report.json。
+Features:
+  1. Each key is validated for connectivity immediately after input; failure prevents proceeding to the next key.
+  2. Successfully verified keys are written to .credentials_cache (permissions 600);
+     re-running the script auto-skips already-passed keys, supporting checkpoint resume (idempotent).
+  3. Final artifacts: root-level `.env` file (permissions 600) + config-report.json.
 
-用法：
+Usage:
     python scripts/setup-credentials.py
-    python scripts/setup-credentials.py --reset    # 清缓存重配
+    python scripts/setup-credentials.py --reset    # Clear cache and reconfigure
     python scripts/setup-credentials.py validate-tencent-cloud --secret-id ... --secret-key ...
     python scripts/setup-credentials.py validate-trtc --app-id ... --app-key ...
     python scripts/setup-credentials.py validate-llm --api-key ... --endpoint ...
@@ -27,7 +27,7 @@ import time
 from pathlib import Path
 from typing import Dict
 
-# 将 capabilities/conversation-core 加入 sys.path 以复用骨架自检逻辑
+# Add capabilities/conversation-core to sys.path to reuse skeleton self-check logic
 _HERE = Path(__file__).resolve().parent
 _PROJECT_ROOT = _HERE.parent
 _CORE_DIR = _PROJECT_ROOT / "capabilities" / "conversation-core"
@@ -44,15 +44,15 @@ from src.health import (  # noqa: E402  pylint: disable=wrong-import-position
     check_trtc,
 )
 
-# 凭证文件落到 conversation-core 目录下，与 src/server.py 的 load_dotenv 路径一致
-# （server.py: _BASE_DIR = capabilities/conversation-core, 读取 _BASE_DIR/.env）
+# Credential files go into the conversation-core directory, matching src/server.py's load_dotenv path
+# (server.py: _BASE_DIR = capabilities/conversation-core, reads _BASE_DIR/.env)
 CACHE_FILE = _CORE_DIR / ".credentials_cache"
 ENV_FILE = _CORE_DIR / ".env"
 REPORT_FILE = _PROJECT_ROOT / "config-report.json"
 
 
 # ---------------------------------------------------------------------------
-# 国际化
+# Internationalization
 # ---------------------------------------------------------------------------
 def _is_zh() -> bool:
     return os.getenv("LANG", "").lower().startswith("zh")
@@ -93,7 +93,7 @@ def t(key: str) -> str:
 
 
 # ---------------------------------------------------------------------------
-# 缓存
+# Cache
 # ---------------------------------------------------------------------------
 def _hash(value: str) -> str:
     return hashlib.sha256(value.encode("utf-8")).hexdigest()
@@ -117,7 +117,7 @@ def _save_cache(cache: Dict[str, str]) -> None:
 
 
 def _persist_env(values: Dict[str, str]) -> None:
-    """写入 / 合并 .env 文件，并强制权限 600。"""
+    """Write / merge .env file and enforce permissions 600."""
     existing: Dict[str, str] = {}
     if ENV_FILE.exists():
         for line in ENV_FILE.read_text(encoding="utf-8").splitlines():
@@ -134,7 +134,7 @@ def _persist_env(values: Dict[str, str]) -> None:
 
 
 def _read_env_value(key: str) -> str:
-    """从已生成的 .env 文件中读取单个变量值（用于多步配置间共享）。"""
+    """Read a single variable value from the generated .env file (for sharing across multi-step config)."""
     if not ENV_FILE.exists():
         return ""
     for line in ENV_FILE.read_text(encoding="utf-8").splitlines():
@@ -146,7 +146,7 @@ def _read_env_value(key: str) -> str:
 
 
 # ---------------------------------------------------------------------------
-# 交互式流程
+# Interactive flow
 # ---------------------------------------------------------------------------
 def _step_tencent_cloud(cache: Dict[str, str], report: Dict[str, dict]) -> None:
     print()
@@ -187,7 +187,7 @@ def _step_tencent_cloud(cache: Dict[str, str], report: Dict[str, dict]) -> None:
 def _step_trtc(cache: Dict[str, str], report: Dict[str, dict]) -> None:
     print()
     print(t("step_trtc"))
-    # 读取已配置的腾讯云凭据用于真实 OpenAPI 校验
+    # Read previously configured Tencent Cloud credentials for real OpenAPI validation
     tc_cred = TencentCloudCredential(
         secret_id=os.getenv("TENCENT_CLOUD_SECRET_ID", "")
         or _read_env_value("TENCENT_CLOUD_SECRET_ID"),
@@ -207,25 +207,25 @@ def _step_trtc(cache: Dict[str, str], report: Dict[str, dict]) -> None:
             print(t("fail") + ": SDKAppID must be integer")
             continue
 
-        # —— SDKSecretKey 防御性校验 ——
-        # TRTC SDKSecretKey 是 64 字符 hex（trtc.io 控制台直接复制的格式）。
-        # 常见错误：用户粘贴时点了两次 → 128 字符；或粘进了多余空白。
+        # —— SDKSecretKey defensive validation ——
+        # TRTC SDKSecretKey is a 64-char hex string (format copied directly from trtc.io console).
+        # Common error: user pastes twice → 128 chars; or pastes extra whitespace.
         if not all(c in "0123456789abcdefABCDEF" for c in app_key):
             print(
                 t("fail")
-                + ": SDKSecretKey 只允许 0-9 / a-f 字符，请重新到 TRTC 控制台复制"
+                + ": SDKSecretKey only allows 0-9 / a-f characters, please re-copy from TRTC console"
             )
             continue
         if len(app_key) == 128 and app_key[:64] == app_key[64:]:
             print(
-                "  ⚠ 检测到 SDKSecretKey 被重复粘贴（128 字符 = 同一串复制两次），"
-                "已自动截断为前 64 字符"
+                "  ⚠ Detected SDKSecretKey pasted twice (128 chars = same string copied twice), "
+                "auto-truncated to first 64 characters"
             )
             app_key = app_key[:64]
         if len(app_key) != 64:
             print(
-                f"{t('fail')}: SDKSecretKey 长度应为 64 字符（你输入了 {len(app_key)}），"
-                "请重新复制"
+                f"{t('fail')}: SDKSecretKey must be 64 characters (you entered {len(app_key)}), "
+                "please re-copy"
             )
             continue
 
@@ -234,7 +234,7 @@ def _step_trtc(cache: Dict[str, str], report: Dict[str, dict]) -> None:
             print(t("skip_cached"))
             return
         print(t("validating"))
-        # 默认走 intl（trtc.io 国际站）；海外开发者无需选择 region
+        # Default to intl (trtc.io international); overseas devs don't need to select region
         result = check_trtc(
             TrtcCredential(sdk_app_id=app_id, sdk_secret_key=app_key, region="intl"),
             tencent=tc_cred if tc_cred.configured else None,
@@ -287,14 +287,14 @@ def _step_llm(cache: Dict[str, str], report: Dict[str, dict]) -> None:
         retries += 1
         print(f"{t('fail')} [{result.error_code}]: {result.detail}")
         if retries >= 3:
-            print("已达 3 次失败上限，请检查 LLM Endpoint / Key 后重试。")
+            print("Reached 3 failure limit. Please check your LLM Endpoint / Key and retry.")
             sys.exit(1)
         if input(t("retry")).strip().lower() in ("n", "no"):
             sys.exit(1)
 
 
 # ---------------------------------------------------------------------------
-# 单步校验子命令（供 start.sh 复用）
+# Single-step validation subcommands (for start.sh reuse)
 # ---------------------------------------------------------------------------
 def _validate_tencent_cloud(args: argparse.Namespace) -> int:
     r = check_tencent_cloud(
@@ -338,7 +338,7 @@ def _validate_llm(args: argparse.Namespace) -> int:
 # ---------------------------------------------------------------------------
 def main() -> int:
     parser = argparse.ArgumentParser(description="TRTC Voice Agent credentials setup")
-    parser.add_argument("--reset", action="store_true", help="清空缓存后重新配置")
+    parser.add_argument("--reset", action="store_true", help="Clear cache and reconfigure")
     sub = parser.add_subparsers(dest="cmd")
 
     p_tc = sub.add_parser("validate-tencent-cloud")
@@ -349,8 +349,8 @@ def main() -> int:
     p_trtc = sub.add_parser("validate-trtc")
     p_trtc.add_argument("--app-id", required=True)
     p_trtc.add_argument("--app-key", required=True)
-    p_trtc.add_argument("--secret-id", default="", help="腾讯云 SecretId（可选，启用深度校验）")
-    p_trtc.add_argument("--secret-key", default="", help="腾讯云 SecretKey（可选，启用深度校验）")
+    p_trtc.add_argument("--secret-id", default="", help="Tencent Cloud SecretId (optional, enables deep validation)")
+    p_trtc.add_argument("--secret-key", default="", help="Tencent Cloud SecretKey (optional, enables deep validation)")
     p_trtc.add_argument("--region", default="ap-guangzhou")
 
     p_llm = sub.add_parser("validate-llm")

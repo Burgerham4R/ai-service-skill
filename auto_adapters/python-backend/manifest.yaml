@@ -2,14 +2,14 @@ name: "python-backend"
 version: "1.0.0"
 target_role: "backend"
 tech_stack: ["flask", "fastapi", "django"]
-description: "Python 后端反向代理：装饰器 / 子路由形式接入骨架"
+description: "Python backend reverse proxy: decorator / sub-router form to connect to skeleton"
 
 templates:
   flask:
     file: "flask.py.tpl"
     target_path: "voice_agent_proxy.py"
     install_hint: |
-      在主应用中：
+      In main app:
         from voice_agent_proxy import bp
         app.register_blueprint(bp, url_prefix='${ROUTE_PREFIX}')
     package_dependencies:
@@ -19,7 +19,7 @@ templates:
     file: "fastapi.py.tpl"
     target_path: "voice_agent_proxy.py"
     install_hint: |
-      在主应用中：
+      In main app:
         from voice_agent_proxy import router
         app.include_router(router, prefix='${ROUTE_PREFIX}')
     package_dependencies:
@@ -29,7 +29,7 @@ templates:
     file: "django.py.tpl"
     target_path: "voice_agent_proxy/views.py"
     install_hint: |
-      在 urls.py 中：
+      In urls.py:
         from voice_agent_proxy.views import proxy_view
         urlpatterns += [path('${ROUTE_PREFIX}/<path:rest>', proxy_view)]
     package_dependencies:

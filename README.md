@@ -1,122 +1,151 @@
-# TRTC AI 客服场景化 Skill
+# TRTC AI Customer Service Skill
 
-> 面向零基础用户的 AI 客服快速搭建工具。不用写一行代码，在对话窗里说一句话，AI 就会带着你一步步把客服系统跑起来。
+> A zero-code AI customer service builder. Just say a sentence in the chat window and the AI will guide you step by step to get your customer service system up and running — no terminal, no scripts, no coding required.
 
-## 这是什么
+## What is this?
 
-把"用 TRTC Conversational AI 搭一个 AI 客服"这件事，封装成动动嘴就能完成的 Skill：
+Building an "AI customer service agent with TRTC Conversational AI" packaged into a plug-and-play Skill:
 
 ```
-你（在 IDE 的 AI 对话窗里）：
-  "基于 TRTC 帮我搭建一个 AI 客服"
+You (in your IDE's AI chat window):
+  "Build me an AI customer service agent with TRTC"
 
-AI（自动完成）：
-  1. 检查运行环境是否满足要求
-  2. 让你选择搭建方式（快速体验 / 接入已有系统）
-  3. 带着你一步步配置 3 把钥匙（云服务凭据）
-  4. 自动安装依赖、装配客服能力
-  5. 启动服务，告诉你浏览器里打开哪个地址就能看到效果
+AI (does everything automatically):
+  1. Checks your runtime environment
+  2. Lets you choose a setup mode (Quick Experience / Integrate into My System)
+  3. Guides you through configuring 3 keys (cloud service credentials)
+  4. Installs dependencies and assembles the customer service capabilities
+  5. Starts the service and gives you a browser URL to see it in action
 
-你全程不开终端、不手动跑脚本。
+You never open a terminal or run a script manually.
 ```
 
-## 两种开始方式
+## Two ways to start
 
-> 本 Skill 的核心能力是 **TRTC Conversational AI（语音客服）**。
+> The core capability of this Skill is **TRTC Conversational AI (voice agent)**.
 
-| 方式 | 适合谁 | 会得到什么 | 你需要做什么 |
-|------|--------|-----------|-------------|
-| **快速体验** | 第一次用，想先看看"这东西长什么样" | 一套完整的语音客服网页界面 + 工单管理后台 | 配置 3 把钥匙 |
-| **接入我的系统** | 已有自己的网站或 App，想把 AI 客服的"大脑"接进去 | 后端 API 接口 + 接口规范 + 示例代码（不生成网页界面） | 配置 3 把钥匙 + 选择能力和交互方式 |
+| Mode | Who it's for | What you get | What you need to do |
+|------|-------------|-------------|---------------------|
+| **Quick Experience** | First-timers who want to see what it looks like | A complete voice agent web UI + ticket management dashboard | Configure 3 keys |
+| **Integrate into My System** | Users who already have a website or app and want to embed the AI agent's "brain" | Backend API endpoints + interface specs + sample code (no UI generated) | Configure 3 keys + choose capabilities and interaction modes |
 
-**不管选哪个，AI 都会带着你一步步走完**，不需要任何编程基础。
+**No matter which one you choose, the AI will walk you through every step** — zero programming experience needed.
 
-## 唯一用户入口
+## The only entry point
 
-[`SKILL.md`](./SKILL.md) —— 由 Coding Agent（CodeBuddy / Cursor / Claude Code）读取并执行。
+[`SKILL.md`](./SKILL.md) — Read and executed by your Coding Agent (CodeBuddy / Cursor / Claude Code).
 
-> **安装位置不限**：本 Skill 可放在项目的二级目录、`.agents/skills/`、`.codebuddy/skills/` 等任意位置，
-> **无需**作为工作区一级目录。脚本均已自定位，Agent 用绝对路径调用即可。
+> **Install anywhere**: This Skill can live in a project subdirectory, `.agents/skills/`, `.codebuddy/skills/`, or anywhere else —
+> it does **not** need to be at the workspace root. Scripts are self-locating; the Agent just needs to use absolute paths.
 
-触发方式：在 AI 对话窗里输入以下任一关键词即可启动：
+Trigger it by typing any of these keywords in the AI chat window:
 
-- "AI 客服" / "搭建客服" / "客服机器人"
-- "TRTC + 客服" / "voice agent + 客服"
-- "基于 TRTC 帮我搭建一个 AI 客服"
+- "AI customer service" / "build customer service" / "customer service bot"
+- "TRTC + customer service" / "voice agent + customer service"
+- "Build me an AI customer service agent with TRTC"
 
-## 三把钥匙是什么
+## What are the 3 keys?
 
-要让客服跑起来，需要配置 3 把云服务通行证。别被"钥匙"这个词吓到，其实就是 3 个字符串，去对应的网站复制粘贴过来就行：
+To get the customer service agent running, you need 3 cloud service credentials. Don't worry — they're just 3 strings you copy-paste from the corresponding websites:
 
-| 钥匙 | 作用 | 在哪里找 |
-|------|------|---------|
-| 第 1 把：腾讯云 API 密钥 | 证明你有权限使用腾讯云的语音和通话服务 | https://console.cloud.tencent.com/cam/capi |
-| 第 2 把：TRTC 应用凭据 | 让客服能打电话、能语音聊天 | https://console.trtc.io/app |
-| 第 3 把：LLM API Key | 让客服能"思考"——理解问题并回答 | 你注册的 AI 服务网站（如 OpenAI、DeepSeek 等） |
+| Key | Purpose | Where to find it |
+|-----|---------|-----------------|
+| Key 1: Tencent Cloud API Key | Proves you have permission to use Tencent Cloud voice & calling services | https://console.cloud.tencent.com/cam/capi |
+| Key 2: TRTC Application Credentials | Lets the agent make calls and do voice chat | https://console.trtc.io/app |
+| Key 3: LLM API Key | Lets the agent "think" — understand queries and respond | Your registered AI service website (e.g. OpenAI, DeepSeek, etc.) |
 
-> 不用担心找不到，AI 会一步步告诉你每个钥匙的具体获取方法。你的钥匙信息仅用于本次配置，系统不会记录或泄漏。
+> The AI will tell you exactly how to get each key step by step. Your key info is only used for this configuration session — the system does not log or leak it.
 
-## 客服具备哪些能力
+## What capabilities does the agent have?
 
-| 能力 | 功能描述 | 快速体验 | 接入系统 |
-|------|----------|:---:|:---:|
-| 对话能力 | 语音 + 文字双向交流 | ✅ 自动装配 | ✅ 默认自带 |
-| 知识库 | 上传文档后，客服能自动检索回答FAQ | ✅ 模拟演示 | 🔘 可选 |
-| 转人工 | 复杂问题自动转给真人坐席 | ✅ 模拟演示 | 🔘 可选 |
-| 工具调用 | 客服能主动查你系统里的数据 | ❌ 不支持 | 🔘 可选 |
-| 对话总结 | 每次聊完自动生成纪要 | ❌ 不支持 | 🔘 可选 |
+| Capability | Description | Quick Experience | Integration |
+|------------|-------------|:---:|:---:|
+| Conversation | Voice + text two-way communication | ✅ Auto-assembled | ✅ Default included |
+| Knowledge Base | Upload docs, agent auto-retrieves and answers FAQ | ✅ Simulated demo | 🔘 Optional |
+| Human Handoff | Complex issues auto-escalate to a human agent | ✅ Simulated demo | 🔘 Optional |
+| Tool Calling | Agent can proactively query data from your system | ❌ Not supported | 🔘 Optional |
+| Session Summary | Auto-generates a summary after each conversation | ❌ Not supported | 🔘 Optional |
 
-> "模拟演示"的意思是：界面和流程是完整的，但用的是演示数据，没有对接真实的业务系统。要接真实系统选「接入我的系统」。
+> "Simulated demo" means: the UI and workflow are complete, but uses demo data without connecting to a real business system. For real integration, choose "Integrate into My System".
 
-## 沟通方式（接入系统时可选）
+## Communication modes (optional for integration)
 
-| 方式 | 描述 | 适合场景 |
-|------|------|---------|
-| 纯文字 IM | 打字聊天回复客户 | 网页客服、App 内消息 |
-| 文字 + TTS | 打字回复 + 语音播报 | 智能音箱、语音助手 |
-| 全模态 | 文字、语音、视频都支持 | 高级客服场景 |
-| 纯语音电话 | 只通过电话沟通 | 呼叫中心、400 热线 |
+| Mode | Description | Best for |
+|------|-------------|---------|
+| Text-only IM | Agent replies via text chat | Web chat widgets, in-app messaging |
+| Text + TTS | Agent types replies + reads them aloud | Smart speakers, voice assistants |
+| Omni-modal | Text, voice, and video all supported | Advanced customer service scenarios |
+| Voice-only Call | Agent communicates only via phone | Call centers, hotlines |
 
-## 目录结构
+## Advanced: Customize TRTC Conversational AI
+
+If you want to fine-tune the AI agent's voice behavior or change the underlying models, refer to the official TRTC Conversational AI documentation:
+
+### Adjust voice parameters (speed / pitch / timbre)
+
+Both STT (speech-to-text) and TTS (text-to-speech) are powered by Tencent's in-house engines. You can adjust voice parameters via the following documentation:
+
+| Stage | Documentation |
+|-------|--------------|
+| STT (Speech-to-Text) | [STT configuration parameters](https://trtc.io/document/69592?product=conversationalai) |
+| TTS (Text-to-Speech) | [TTS configuration parameters](https://trtc.io/document/68340?product=conversationalai) |
+
+### Switch STT / LLM / TTS models
+
+To change the underlying STT, LLM, or TTS models, check the model overview for each pipeline stage and follow the integration guide:
+
+| Stage | Documentation |
+|-------|--------------|
+| STT (Speech-to-Text) | [STT Model Overview](https://trtc.io/document/69592?product=conversationalai) |
+| LLM (Language Model) | [LLM Model Overview](https://trtc.io/document/68338?product=conversationalai) |
+| TTS (Text-to-Speech) | [TTS Model Overview](https://trtc.io/document/68340?product=conversationalai) |
+
+### Full documentation
+
+For any other configuration needs, start from the Conversational AI overview and navigate from there:
+
+- [TRTC Conversational AI Overview](https://trtc.io/document/conversational-ai-overview?product=conversationalai)
+
+## Directory structure
 
 ```
 ai-service-skill/
-├── SKILL.md                       # ★ 唯一用户入口（Coding Agent 触发）
-├── start.sh                       # 启动脚本（自动安装依赖 + 启动服务）
+├── SKILL.md                       # ★ The only entry point (triggered by Coding Agent)
+├── start.sh                       # Bootstrap script (auto-install deps + start service)
 │
-├── scripts/                       # AI 调用的工具脚本
-│   ├── verify-credentials.py      # 三把钥匙验证
-│   ├── setup-credentials.py       # 开发者交互式配置
-│   ├── add-capability.py          # 能力包装配
-│   ├── contract-adapt.py          # 接口契约适配
-│   └── lib/                       # 复用模块
+├── scripts/                       # AI-invoked tool scripts
+│   ├── verify-credentials.py      # 3-key verification
+│   ├── setup-credentials.py       # Interactive developer setup
+│   ├── add-capability.py          # Capability assembly
+│   ├── contract-adapt.py          # Interface contract adaptation
+│   └── lib/                       # Shared modules
 │
 ├── capabilities/
-│   ├── conversation-core/         # 通用 Voice Agent 骨架
-│   ├── knowledge-base/            # FAQ 知识库检索
-│   ├── tool-calling/              # 工具调用
-│   ├── human-handoff/             # 转人工 + 工单管理
-│   ├── session-summary/           # 会话纪要
-│   └── digital-human/             # 数字人（占位）
+│   ├── conversation-core/         # Generic Voice Agent skeleton
+│   ├── knowledge-base/            # FAQ knowledge base retrieval
+│   ├── tool-calling/              # Tool calling
+│   ├── human-handoff/             # Human handoff + ticket management
+│   ├── session-summary/           # Session summaries
+│   └── digital-human/             # Digital human (placeholder)
 │
 ├── scenarios/
-│   ├── customer-service/          # 路径 A：演示 Demo UI
-│   └── custom-builder/            # 路径 B：能力勾选模板
+│   ├── customer-service/          # Path A: Demo UI
+│   └── custom-builder/            # Path B: Capability selection wizard
 │
-├── auto_adapters/                 # 技术栈适配器
-└── tests/                         # 测试套件（93 个）
+├── auto_adapters/                 # Tech stack adapters
+└── tests/                         # Test suite
 ```
 
-## 常见问题
+## FAQ
 
-| 问题 | 解决方法 |
-|------|---------|
-| Key 验证失败 | 回到 Key 配置步骤，检查每把钥匙的值是否填对 |
-| 端口 3000 被占用 | 换一个端口（如 `--port 8080`）或关掉占用端口的程序 |
-| Python 版本太低 | 去 python.org 下载 Python 3.9+ 版本安装 |
-| 启动后浏览器看不到内容 | `Cmd+Shift+R`（Mac）或 `Ctrl+Shift+R`（Windows）强制刷新 |
-| 想接真实业务系统 | 重新走一遍流程选「接入我的系统」 |
+| Issue | Solution |
+|-------|----------|
+| Key verification failed | Go back to the key configuration step and double-check each key value |
+| Port 3000 is in use | Use a different port (e.g. `--port 8080`) or stop the program occupying the port |
+| Python version too low | Download and install Python 3.9+ from python.org |
+| Browser shows blank page after startup | Hard refresh: `Cmd+Shift+R` (Mac) or `Ctrl+Shift+R` (Windows) |
+| Want to connect a real business system | Re-run the workflow and choose "Integrate into My System" |
 
 ---
 
-> **最后说一句**：这个 Skill 的设计目标就是让完全不懂编程的人也能把 AI 客服跑起来。如果你在使用的过程中遇到任何问题，直接在对话窗里告诉 AI，它会帮你解决。
+> **One last thing**: This Skill is designed so that anyone — even with zero coding experience — can get an AI customer service agent up and running. If you run into any issues along the way, just tell the AI in the chat window and it'll help you resolve them.

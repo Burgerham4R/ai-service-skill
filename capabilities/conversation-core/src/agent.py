@@ -1,15 +1,15 @@
-"""Voice Agent 会话编排（ASR / LLM / TTS / 会话管理统一链路）。
+"""Voice Agent session orchestration (unified ASR / LLM / TTS / session management pipeline).
 
-骨架仅做协议编排：
-1) 客户端通过 /api/v1/get_config 获取 RoomId / 用户 UserSig
-2) 前端 SDK 入房并发起 /api/v1/agent/start
-3) 服务端使用 trtc_client.start() 拉起 AI 通道机器人
-   ↳ TRTC ConversationAI 内部串接 ASR → LLM → TTS 全链路
-4) /api/v1/agent/stop 关闭任务
-5) /api/v1/agent/control 用于文本注入 / 打断（覆盖 text_input 模态）
+The skeleton only handles protocol orchestration:
+1) Client obtains RoomId / user UserSig via /api/v1/get_config
+2) Frontend SDK joins the room and calls /api/v1/agent/start
+3) Server uses trtc_client.start() to launch the AI channel bot
+   ↳ TRTC ConversationAI internally chains ASR → LLM → TTS full pipeline
+4) /api/v1/agent/stop closes the task
+5) /api/v1/agent/control is used for text injection / interrupt (covering text_input modality)
 
-注意：本模块不引入任何业务 Prompt、行业知识库或 FAQ 模板，
-所有业务逻辑均通过外层能力包以 manifest.yaml 注入点形式叠加。
+Note: This module does not introduce any business prompts, industry knowledge bases, or FAQ templates.
+All business logic is overlaid via external capability packages using manifest.yaml injection points.
 """
 from __future__ import annotations
 
@@ -43,17 +43,17 @@ class SessionInfo:
 
 
 class ConversationAgent:
-    """Voice Agent 会话总管。
+    """Voice Agent session manager.
 
-    单例风格，由 server 在启动时实例化并复用。仅维护内存中的 session
-    映射，不做持久化（生产化由外层能力包负责）。
+    Singleton-style, instantiated and reused by server at startup. Only maintains in-memory
+    session mapping, no persistence (production persistence handled by external capability packages).
     """
 
     def __init__(self, credentials: Credentials, io_modality: IoModality) -> None:
         if not credentials.fully_configured:
             raise ValueError(
                 f"credentials missing: {credentials.missing()}; "
-                "请先执行 scripts/setup-credentials.py 完成配置"
+                "please run scripts/setup-credentials.py to complete configuration first"
             )
         self._cred = credentials
         self._io = io_modality
@@ -73,17 +73,17 @@ class ConversationAgent:
         user_id: Optional[str] = None,
         room_id: Optional[str] = None,
     ) -> Dict[str, Any]:
-        """生成入房凭据（房间号 / 用户 UserSig / AI 机器人 UserSig）。
+        """Generate room credentials (room number / user UserSig / AI bot UserSig).
 
-        默认使用 **数字房间号**（与 TRTC 控制台默认应用一致），避免与未启用
-        PrivateMapKey 的应用产生 ``InvalidParameter.UserSig`` 误判。
-        UserId 命名仅使用 ``[A-Za-z0-9_-]``，长度 ≤ 32（TRTC 强制约束）。
+        Defaults to **numeric room IDs** (matching TRTC console default applications),
+        avoiding ``InvalidParameter.UserSig`` false positives with apps that have
+        PrivateMapKey disabled. UserId names use only ``[A-Za-z0-9_-]``, length ≤ 32 (TRTC hard constraint).
         """
-        # 数字房间号：取 32-bit 范围内的随机正整数
+        # Numeric room ID: random positive integer within 32-bit range
         room = str(room_id) if room_id else str(secrets.randbelow(2_000_000_000) + 1)
         u_id = str(user_id) if user_id else f"u_{secrets.token_hex(6)}"
         agent_u_id = f"ai_{secrets.token_hex(6)}"
-        # TRTC UserId 长度上限 32，做一次防御性截断
+        # TRTC UserId max length is 32; defensive truncation
         u_id = u_id[:32]
         agent_u_id = agent_u_id[:32]
         user_sig = gen_user_sig(
@@ -112,7 +112,7 @@ class ConversationAgent:
             "session_id": sid,
             "sdk_app_id": self._cred.trtc.sdk_app_id,
             "room_id": room,
-            "room_id_type": 0,  # 数字房间号
+            "room_id_type": 0,  # Numeric room ID
             "user_id": u_id,
             "user_sig": user_sig,
             "agent_user_id": agent_u_id,
@@ -132,8 +132,8 @@ class ConversationAgent:
         # Capabilities (e.g. knowledge-base) injected via add-capability.py land here,
         # inside the start_agent method body, where `config` and `info` are in scope.
         #
-        # [knowledge-base] 若已安装 knowledge-base 能力包，则把命中的 FAQ 拼到 instructions
-        # 通过 _capability_loader 动态加载，独立于 cwd / 仓库目录名 / 连字符目录
+        # [knowledge-base] If knowledge-base capability is installed, prepend matched FAQ to instructions
+        # via dynamic loading through _capability_loader, independent of cwd / repo directory name / hyphenated directories
         if config is not None and getattr(config, "instructions", None):
             from ._capability_loader import try_load_capability
             _kb = try_load_capability("knowledge-base", "src/retriever.py")
@@ -148,7 +148,7 @@ class ConversationAgent:
             agent_user_sig=info.agent_user_sig,
             target_user_id=info.user_id,
             config=config,
-            room_id_type=0,  # 数字房间号（与 issue_config 保持一致）
+            room_id_type=0,  # Numeric room ID (consistent with issue_config)
         )
         with self._lock:
             info.task_id = result.get("task_id")
@@ -185,7 +185,7 @@ class ConversationAgent:
         text: str,
         interrupt: bool = True,
     ) -> Dict[str, Any]:
-        """文本输入通道：将文字注入运行中的 AI 任务。"""
+        """Text input channel: inject text into a running AI task."""
         info = self._require_session(session_id)
         if not info.task_id:
             raise RuntimeError("session has no active task; call start_agent first")
@@ -204,7 +204,7 @@ class ConversationAgent:
         return {"session_id": session_id, "task_id": info.task_id, "delivered": True}
 
     # ------------------------------------------------------------------
-    # 辅助
+    # Helpers
     # ------------------------------------------------------------------
     def list_sessions(self) -> Dict[str, Any]:
         with self._lock:

@@ -1,21 +1,21 @@
-"""DefaultRestHandoffClient —— 按 business_contract 默认契约调用外部工单系统。
+"""DefaultRestHandoffClient — call external ticketing system per business_contract default contract.
 
-对应契约：
+Corresponding contracts:
 - POST   /tickets               ticket.create
 - GET    /tickets/{ticket_id}   ticket.status_query
 - POST   /tickets/{ticket_id}/cancel    ticket.cancel
 
-环境变量：
-- HH_REST_BASE_URL    工单系统基础 URL（必填，禁止指向私网，详见 §安全）
-- HH_REST_TOKEN       Bearer Token（可选）
-- HH_REST_TIMEOUT_MS  超时（默认 5000）
+Environment variables:
+- HH_REST_BASE_URL    Ticketing system base URL (required; must not point to private network, see §Security)
+- HH_REST_TOKEN       Bearer Token (optional)
+- HH_REST_TIMEOUT_MS  Timeout (default 5000)
 
-安全约束（与项目 security_rules 对齐）：
-- 仅允许 https:// 或 http://localhost / 127.0.0.1
-- 默认拒绝常见内网段（9.* / 10.* / 11.* / 21.* / 30.* / 169.254.* / 172.16-31.* / 192.168.*）
-- 落盘日志自动脱敏 Authorization
+Security constraints (aligned with project security_rules):
+- Only allow https:// or http://localhost / 127.0.0.1
+- Default reject common private network ranges (9.* / 10.* / 11.* / 21.* / 30.* / 169.254.* / 172.16-31.* / 192.168.*)
+- Log redaction auto-masks Authorization
 
-依赖：仅 requests（已在 conversation-core/requirements.txt 中），无新依赖。
+Dependency: only requests (already in conversation-core/requirements.txt), no new deps.
 """
 from __future__ import annotations
 
@@ -44,7 +44,7 @@ logger = logging.getLogger(__name__)
 
 
 # ---------------------------------------------------------------------------
-# 安全：私网与本地环回判断
+# Security: private network and loopback check
 # ---------------------------------------------------------------------------
 _PRIVATE_PATTERNS = [
     re.compile(r"^9\."),
@@ -73,12 +73,12 @@ def _validate_base_url(url: str) -> str:
     host = parsed.hostname or ""
     if not host:
         raise ValueError("empty host in HH_REST_BASE_URL")
-    # 非 https 时仅允许 localhost
+    # Non-HTTPS only allowed for localhost
     if parsed.scheme == "http" and not _is_localhost(host):
         raise ValueError(
             "non-HTTPS HH_REST_BASE_URL only allowed for localhost"
         )
-    # 拒绝内网段（避免 SSRF）
+    # Reject private network ranges (prevent SSRF)
     if _is_private(host):
         raise ValueError(
             f"access to private network host '{host}' is denied; "
@@ -88,10 +88,10 @@ def _validate_base_url(url: str) -> str:
 
 
 # ---------------------------------------------------------------------------
-# 客户端实现
+# Client implementation
 # ---------------------------------------------------------------------------
 class DefaultRestHandoffClient(HandoffClient):
-    """按默认 REST 契约调用外部工单系统。"""
+    """Call external ticketing system per default REST contract."""
 
     def __init__(
         self,
@@ -110,7 +110,7 @@ class DefaultRestHandoffClient(HandoffClient):
         self._session = requests.Session()
 
     # ------------------------------------------------------------------
-    # HandoffClient 必须实现
+    # HandoffClient required implementations
     # ------------------------------------------------------------------
     def create_ticket(
         self,
@@ -168,7 +168,7 @@ class DefaultRestHandoffClient(HandoffClient):
             return None
         return Ticket(
             ticket_id=ticket_id,
-            user_id="",  # remote 不一定回返 user_id
+            user_id="",  # remote may not return user_id
             status=TicketStatusEnum.CANCELED.value,
             reason=reason,
             updated_at=now_ts(),
@@ -176,7 +176,7 @@ class DefaultRestHandoffClient(HandoffClient):
         )
 
     def overall_status(self) -> OverallStatus:
-        # 远程后端不暴露整体状态；返回占位（用于 /api/v1/handoff/status 兼容）
+        # Remote backend does not expose overall status; return placeholder (for /api/v1/handoff/status compatibility)
         return OverallStatus(
             agent_pool_size=-1,
             available_agents=-1,
@@ -186,7 +186,7 @@ class DefaultRestHandoffClient(HandoffClient):
         )
 
     # ------------------------------------------------------------------
-    # 内部：HTTP
+    # Internal：HTTP
     # ------------------------------------------------------------------
     def _headers(self) -> dict:
         h = {"Content-Type": "application/json"}
@@ -214,7 +214,7 @@ class DefaultRestHandoffClient(HandoffClient):
         if resp.status_code == 404 and optional:
             return None
         if resp.status_code >= 400:
-            # 不打印响应体（可能含敏感信息）
+            # Do not print response body (may contain sensitive info)
             raise RuntimeError(
                 f"remote ticket service returned HTTP {resp.status_code}"
             )
@@ -222,14 +222,14 @@ class DefaultRestHandoffClient(HandoffClient):
             data = resp.json()
         except ValueError as exc:
             raise RuntimeError("remote ticket service returned non-JSON") from exc
-        # 响应可能是 {"data": {...}} 或扁平 {...}
+        # Response may be {"data": {...}} or flat {...}
         if isinstance(data, dict) and "data" in data and isinstance(data["data"], dict):
             return data["data"]
         return data
 
 
 # ---------------------------------------------------------------------------
-# 工厂
+# Factory
 # ---------------------------------------------------------------------------
 def from_env() -> Optional[DefaultRestHandoffClient]:
     base = os.getenv("HH_REST_BASE_URL")

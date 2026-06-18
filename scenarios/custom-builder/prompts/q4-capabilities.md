@@ -1,78 +1,78 @@
-# Q4 —— 能力勾选（多选；默认全空）
+# Q4 —— Capability Selection (multi-select; defaults to none)
 
-> 路径 B 第 4 题。AI 用 `ask_followup_question` **多选**模式提问（`multiSelect: true`）。
+> Path B Question 4. AI uses `ask_followup_question` in **multi-select** mode (`multiSelect: true`).
 >
-> 答复回写到内部变量 `extra_capabilities`（字符串数组），用于决定：
-> 1. 路径 B 装配命令的能力清单：`add-capability.py conversation-core <勾选项>`
-> 2. recipe.yaml 的 `capabilities.install` 列表
+> Answer written to internal variable `extra_capabilities` (string array), used to determine:
+> 1. Capability list for Path B assembly command: `add-capability.py conversation-core <selected>`
+> 2. recipe.yaml `capabilities.install` list
 >
-> **重要**：与路径 A（默认装 KB + HH）不同；路径 B 默认**全空**，仅装 conversation-core 骨架。
-> 用户**显式勾选**的能力才会被加入清单。
+> **Important**: Unlike Path A (which defaults to KB + HH), Path B defaults to **none**, installing only the conversation-core skeleton.
+> Only capabilities **explicitly selected** by the user are added to the list.
 
 ---
 
-## AI 应该说
+## What the AI should say
 
-> 第 4 题：除了对话骨架（conversation-core），还要叠加哪些能力？
-> （可多选，不勾选也可以；默认仅装骨架）
+> Question 4: Besides the conversation skeleton (conversation-core), what additional capabilities do you want to layer on?
+> (Multi-select; you can also select none. Defaults to skeleton only.)
 
-`options`：
+`options`:
 
 ```text
-① knowledge-base   — FAQ / 知识库检索
-② human-handoff    — 转人工 + 工单流（带坐席看板）
-③ tool-calling     — 让 AI 能调你的业务工具 / 远程 API
-④ session-summary  — 会话结束自动写一条纪要 / 工单备注
+① knowledge-base   — FAQ / knowledge base retrieval
+② human-handoff    — Human handoff + ticket flow (with agent dashboard)
+③ tool-calling     — Let the AI call your business tools / remote APIs
+④ session-summary  — Auto-generate a summary / ticket note when a session ends
 ```
 
 `multiSelect: true`
 
 ---
 
-## 不在选项里的能力（解释口径）
+## Capabilities not in options (explanation talking points)
 
-| 能力 | 为什么不出现 |
+| Capability | Why it's not listed |
 |---|---|
-| `digital-human` | 当前为占位能力（manifest 未补齐 ports/adapters）；如需数字人请等后续版本 |
+| `digital-human` | Currently a placeholder capability (manifest hasn't completed ports/adapters); for digital human, please wait for a future version |
 
 ---
 
-## 校验 / 回退
+## Validation / Fallback
 
-- Q4 全空 → 跳过 `add-capability.py` 调用（仅 conversation-core 骨架，已在仓库内）
-- 选了 `tool-calling` 但 Q2 选了"纯语音电话" → 警告"工具调用在纯语音通道不会显示中间状态"，让用户确认是否保留
-- 选了 `session-summary` 但未配 `LLM_API_KEY` → 警告"会话纪要依赖 LLM Key，请在 §7 完成 LLM Key 配置"
+- Q4 all empty → skip `add-capability.py` call (conversation-core skeleton only, already in the repo)
+- Selected `tool-calling` but Q2 picked "voice-only call" → warn "tool calling will not display intermediate status on a voice-only channel"; ask user to confirm whether to keep it
+- Selected `session-summary` but `LLM_API_KEY` not configured → warn "session summary depends on LLM Key; please complete LLM Key configuration in §7"
 
 ---
 
-## 选项 → 装配命令
+## Options → Assembly Command
 
 ```bash
-# AI 在路径 B Step 6 执行（Q4 全空时跳过整条命令）：
+# AI executes at Path B Step 6 (skip the entire command when Q4 is empty):
 python3 scripts/add-capability.py \
     knowledge-base human-handoff tool-calling session-summary \
     --apply --json
 ```
 
-> 实际命令只包含用户**勾选**的能力名；上面是"全选"示例。
+> The actual command only includes the capability names the user **selected**; the above is the "select all" example.
 
 ---
 
-## 答复回写
+## Answer write-back
 
 ```yaml
-# 渲染到 <workspace>/recipe.yaml
+# Render to <workspace>/recipe.yaml
 capabilities:
   required:
     - name: conversation-core
       role: skeleton
   install:
-    # 用户勾选的能力（每勾一项追加一条；adapter 缺省走 manifest.config.adapter.default）
+    # User-selected capabilities (append one entry per selected; adapter defaults to manifest.config.adapter.default)
     - name: knowledge-base
       adapter: mock
     - name: human-handoff
       adapter: local_queue
   optional: []
   excluded:
-    - name: digital-human          # 本期不参与
+    - name: digital-human          # Not participating in this release
 ```

@@ -1,10 +1,11 @@
-"""TRTC Conversational AI 控制面客户端。
+"""TRTC Conversational AI control plane client.
 
-封装 StartAIConversation / StopAIConversation / ControlAIConversation
-三个 REST API 的最小调用链路。骨架层只做"协议封装 + 凭证签名"，
-不内置任何业务 Prompt、行业知识库或 FAQ 模板。
+Encapsulates the minimal call chain for three REST APIs:
+StartAIConversation / StopAIConversation / ControlAIConversation.
+The skeleton layer only does "protocol encapsulation + credential signing",
+with no built-in business prompts, industry knowledge bases, or FAQ templates.
 
-API 文档：
+API docs:
 - StartAIConversation: https://cloud.tencent.com/document/product/647/108514
 - StopAIConversation:  https://cloud.tencent.com/document/product/647/108513
 - ControlAIConversation: https://cloud.tencent.com/document/product/647/109408
@@ -100,19 +101,19 @@ def _signed_request(
 
 @dataclass
 class AgentLifecycleConfig:
-    """会话生命周期参数（与业务逻辑无关）。"""
+    """Session lifecycle parameters (business-logic independent)."""
 
     instructions: str = "You are a helpful voice assistant. Reply briefly."
     greeting: str = "Hello, how can I help you?"
-    max_idle_time: int = 60  # 秒
+    max_idle_time: int = 60  # seconds
     welcome_message: str = ""
-    language: str = "en"  # 默认英文（最广泛兼容；中文需要 TRTC 应用启用对应能力）
-    voice_id: str = "v-female-A4b9KqP2"  # TRTC FlowTTS 默认女声（英文 Articulate Narrator）
+    language: str = "en"  # Default English (widest compatibility; Chinese requires TRTC app to enable corresponding capability)
+    voice_id: str = "v-female-A4b9KqP2"  # TRTC FlowTTS default female voice (English Articulate Narrator)
     tts_model: str = "flow_01_turbo"
 
 
-# TRTC FlowTTS 真实音色 ID（取自 oral-coach 项目验证可用）
-# 完整音色列表：https://trtc.io/document/79682?product=conversationalai
+# TRTC FlowTTS verified voice IDs (taken from oral-coach project, confirmed working)
+# Full voice list: https://trtc.io/document/79682?product=conversationalai
 DEFAULT_VOICE_IDS = {
     ("en", "female"): "v-female-p9Xy7Q1L",  # Articulate Narrator
     ("en", "male"):   "v-male-A4b9KqP2",     # Scholarly Lecturer
@@ -122,12 +123,12 @@ DEFAULT_VOICE_IDS = {
 
 
 class TrtcConversationClient:
-    """TRTC ConversationAI 控制面薄封装。
+    """Thin wrapper around TRTC ConversationAI control plane.
 
-    构造参数：
-        tencent: 腾讯云 API 密钥（用于签名 REST 请求）。
-        trtc:    TRTC SDKAppID / SDKSecretKey（StartAIConversation 中的 SdkAppId）。
-        llm:     LLM 凭据，用于注入 LLMConfig（仅做参数透传，不在骨架内调用）。
+    Constructor parameters:
+        tencent: Tencent Cloud API keys (used to sign REST requests).
+        trtc:    TRTC SDKAppID / SDKSecretKey (the SdkAppId in StartAIConversation).
+        llm:     LLM credentials, used to populate LLMConfig (passthrough only, not called within the skeleton).
     """
 
     def __init__(
@@ -159,7 +160,7 @@ class TrtcConversationClient:
         room_id_type: int = 0,
     ) -> Dict[str, Any]:
         cfg = config or AgentLifecycleConfig()
-        # 解析 voice_id：用户显式指定 > 按 language 取默认
+        # Resolve voice_id: user explicit > default per language
         voice_id = cfg.voice_id or DEFAULT_VOICE_IDS.get(
             (cfg.language, "female"),
             DEFAULT_VOICE_IDS[("en", "female")],
@@ -174,18 +175,18 @@ class TrtcConversationClient:
                 "MaxIdleTime": cfg.max_idle_time,
                 "TargetUserId": target_user_id,
                 "WelcomeMessage": cfg.welcome_message or cfg.greeting,
-                # 智能打断（关键）：
-                #   InterruptMode 2 = 自动 + 手动双轨
-                #     • 自动：用户开口说话超过 InterruptSpeechDuration ms → 停 TTS
-                #     • 手动：前端发 type:20001 自定义消息 → 立即停 TTS（用于
-                #       文字输入场景：发文字前先打断，再 type:20000 触发新回合）
+                # Smart interrupt (critical):
+                #   InterruptMode 2 = auto + manual dual-track
+                #     • Auto: user speaks beyond InterruptSpeechDuration ms → stop TTS
+                #     • Manual: frontend sends type:20001 custom message → immediately stop TTS
+                #       (for text input: send interrupt before text, then type:20000 triggers new turn)
                 "InterruptMode": 2,
                 "InterruptSpeechDuration": 500,
-                # 字幕模式：1 = 一并下发用户与 AI 字幕到端上
+                # Subtitle mode: 1 = deliver both user and AI subtitles to client
                 "SubtitleMode": 1,
-                # 单字过滤：避免 ASR 把"嗯/啊"等碎音切成单字
+                # Single-word filter: prevent ASR from splitting filler sounds like "um/ah" into single words
                 "FilterOneWord": True,
-                # 回合检测：3 = 语义 + VAD 双信号识别用户讲完
+                # Turn detection: 3 = semantic + VAD dual-signal to detect when user has finished speaking
                 "TurnDetectionMode": 3,
                 "TurnDetection": {"SemanticEagerness": "auto"},
             },
@@ -222,7 +223,7 @@ class TrtcConversationClient:
                 ensure_ascii=False,
             ),
         }
-        # 启动前打印关键诊断信息（脱敏 UserSig）
+        # Log key diagnostics before starting (UserSig redacted)
         logger.info(
             "StartAIConversation: endpoint=%s region=%s SdkAppId=%s RoomId=%s "
             "agent=%s target=%s userSig=%s...%s(len=%d) lang=%s voice=%s",
@@ -267,7 +268,7 @@ class TrtcConversationClient:
         )
 
     # ------------------------------------------------------------------
-    # ControlAIConversation：用于文本注入 / 打断
+    # ControlAIConversation: used for text injection / interrupt
     # ------------------------------------------------------------------
     def control(
         self,
@@ -276,7 +277,7 @@ class TrtcConversationClient:
         text: Optional[str] = None,
         interrupt: bool = True,
     ) -> Dict[str, Any]:
-        """向运行中的对话任务注入文本或下达控制指令。"""
+        """Inject text or issue a control command to a running conversation task."""
         if not task_id or not command:
             raise ValueError("task_id and command are required")
         payload: Dict[str, Any] = {"TaskId": task_id, "Command": command}

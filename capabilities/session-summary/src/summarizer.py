@@ -1,10 +1,10 @@
-"""结构化摘要生成器。
+"""Structured summary generator.
 
-策略：
-- 离线启发式（默认）：抽取问句 / 待办关键词 / 关键名词，本地零依赖完成。
-- LLM 二次总结（可选，需 LLM_API_KEY）：把 turns 序列化后调用 OpenAI 兼容协议。
+Strategy:
+- Offline heuristic (default): extract questions / to-do keywords / key nouns, done locally with zero dependencies.
+- LLM secondary summarization (optional, requires LLM_API_KEY): serialize turns and call OpenAI-compatible protocol.
 
-输出 JSON：
+Output JSON:
     {
       "topics":      ["..."],
       "user_intents": ["..."],
@@ -28,9 +28,9 @@ logger = logging.getLogger(__name__)
 
 
 _QUESTION_RE = re.compile(r"[^?？]+[?？]")
-_ACTION_RE = re.compile(r"(我想|请帮我|帮我|need to|please)([^。.!?？!\n]+)", re.IGNORECASE)
+_ACTION_RE = re.compile(r"(I want|please help|need to|please)([^。.!?？!\n]+)", re.IGNORECASE)
 _NOUN_RE = re.compile(r"[A-Z][A-Za-z0-9_]{2,}|[\u4e00-\u9fff]{2,}")
-_STOPWORDS = {"我们", "你们", "什么", "因为", "所以", "时候", "可以", "需要"}
+_STOPWORDS = {"the", "a", "an", "because", "so", "when", "can", "need"}
 
 
 def _heuristic(record: SessionRecord) -> Dict[str, Any]:
@@ -80,11 +80,11 @@ def _llm_summarize(record: SessionRecord) -> Dict[str, Any]:
 
     transcript = "\n".join(f"[{t.role}] {t.text}" for t in record.turns[-50:])
     prompt = (
-        "你是会话纪要助理，请将以下对话总结为 JSON，键包含 topics, user_intents,"
-        " next_actions, highlights，每个键值为字符串数组（不超过 5 项）。"
-        "禁止包含任何敏感信息（API Key/Token 等）。\n"
-        f"对话内容:\n{transcript}\n"
-        "仅输出 JSON。"
+        "You are a session summary assistant. Summarize the following conversation as JSON with keys: topics, user_intents,"
+        " next_actions, highlights. Each value is a string array (max 5 items)."
+        "Do not include any sensitive information (API Key/Token etc.).\n"
+        f"Conversation content:\n{transcript}\n"
+        "Output JSON only."
     )
     resp = requests.post(
         api_url,

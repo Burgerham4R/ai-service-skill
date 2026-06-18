@@ -1,4 +1,4 @@
-"""能力包叠加端到端测试：真实仓库的 add-capability dry-run + adapter 渲染。"""
+"""Capability overlay end-to-end tests: add-capability dry-run + adapter rendering against the real repo."""
 import json
 import subprocess
 import sys
@@ -40,7 +40,7 @@ class CapabilityOverlayTests(unittest.TestCase):
         for r in out["reports"]:
             self.assertIn("skeleton_injection", r)
             for inj in r["skeleton_injection"]:
-                # 注入计划必须能定位到 anchor（应用阶段为 dry-run，所以 applied 可能为 True/False，关键是无 error）
+                # Injection plan must locate anchor (dry-run so applied may be True/False; key is no error)
                 if inj["error"]:
                     self.fail(f"injection error for {r['capability']}: {inj}")
 
@@ -59,11 +59,11 @@ class CapabilityOverlayTests(unittest.TestCase):
             kb_report = next(r for r in out["reports"] if r["capability"] == "knowledge-base")
             self.assertEqual(kb_report["adapter"]["adapter"], "frontend-spa")
             self.assertEqual(kb_report["degrade"]["level"], "L1")
-            # 期望生成的文件存在
+            # Expected generated file exists
             target = user_proj / "src" / "components" / "VoiceAgent.tsx"
             self.assertTrue(target.exists(), f"expected {target} to exist")
             content = target.read_text(encoding="utf-8")
-            # 占位变量已被替换
+            # Placeholder variables have been substituted
             self.assertIn("http://localhost:3000", content)
             self.assertNotIn("${SKELETON_BASE_URL}", content)
 

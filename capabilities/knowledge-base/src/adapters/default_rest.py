@@ -1,17 +1,17 @@
-"""DefaultRestKbClient —— 按 business_contract 默认契约调用外部 FAQ / 检索 API。
+"""DefaultRestKbClient — call external FAQ / search API per business_contract default contract.
 
-对应契约：
+Corresponding contracts:
 - POST   /faq/search             faq.search
 - GET    /faq                    faq.list
 - POST   /faq                    faq.upsert
 - DELETE /faq/{entry_id}         faq.delete
 
-环境变量：
-- KB_REST_BASE_URL    FAQ 服务基础 URL
-- KB_REST_TOKEN       Bearer Token（可选）
-- KB_REST_TIMEOUT_MS  超时（默认 5000）
+Environment variables:
+- KB_REST_BASE_URL    FAQ service base URL
+- KB_REST_TOKEN       Bearer Token (optional)
+- KB_REST_TIMEOUT_MS  Timeout (default 5000)
 
-安全：与 human-handoff 的 default_rest 一致 —— 仅 https / localhost；拒绝私网。
+Security: consistent with human-handoff default_rest — only https / localhost; reject private networks.
 """
 from __future__ import annotations
 
@@ -72,7 +72,7 @@ def _validate_base_url(url: str) -> str:
 
 
 class DefaultRestKbClient(KnowledgeBaseClient):
-    """按默认 REST 契约调用外部 FAQ 服务。"""
+    """Call external FAQ service per default REST contract."""
 
     def __init__(
         self,
