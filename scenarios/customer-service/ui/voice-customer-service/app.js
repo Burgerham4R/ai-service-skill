@@ -293,6 +293,11 @@
       // User utterance echoed back by bot
       if (end && text.trim()) {
         var tt = text.trim();
+        // System-level injection (card clicks) — suppress from chat, only forward to AI
+        if (tt.indexOf('[system]') === 0) {
+          onUserUtteranceFinal(tt);
+          return;
+        }
         if (consumeLocalEcho(tt)) return;  // dedup
         if (!state.userBubbleOpen) {
           addBubble('user', tt);
@@ -739,7 +744,7 @@
     openDetailView();
 
     // Send product context to AI with full details (system-level injection — no user bubble)
-    var contextMsg = '[system] The customer is viewing product "' + p.name + '" (ID: ' + p.id + '), priced at $' + p.price + ', tagged as "' + p.tag + '". ' + desc + ' The customer wants to know more about this product. Please provide a helpful, detailed response including key features, price, and purchase recommendation.';
+    var contextMsg = '[system] The customer is viewing product "' + p.name + '" (ID: ' + p.id + '), priced at $' + p.price + ', tagged as "' + p.tag + '". ' + desc + ' The customer wants to know more about this product. Please provide a helpful, detailed response including key features, price, and purchase recommendation. IMPORTANT: reply in plain text only, do NOT use markdown formatting (no asterisks, bold, headers or lists).';
     sendInterrupt();
     setTimeout(function() {
       sendCustomToAgent({
@@ -782,7 +787,8 @@
     var contextMsg = '[system] The customer is viewing order #' + o.id + ', placed on ' + o.date + '. ' +
       'Product: ' + p.name + ' (ID: ' + p.id + '), ' + o.qty + 'x at $' + p.price + ' each, order total $' + total + '. ' +
       'Status: ' + o.status + '. The customer wants to inquire about this order. ' +
-      'Please provide a helpful response about the order status, shipping details, and any relevant next steps.';
+      'Please provide a helpful response about the order status, shipping details, and any relevant next steps. ' +
+      'IMPORTANT: reply in plain text only, do NOT use markdown formatting (no asterisks, bold, headers or lists).';
     sendInterrupt();
     setTimeout(function() {
       sendCustomToAgent({
