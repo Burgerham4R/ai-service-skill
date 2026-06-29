@@ -208,4 +208,4 @@ ai-service-skill/
 
 ## お問い合わせ
 
-技術サポートやエンタープライズ向けプランについてのお問い合わせは、[trtc.io/contact](https://trtc.io/contact) までお気軽にご連絡ください。
+技術サポートやエンタープライズ向けプランについてのお問い合わせは、[trtc.io/contact](https://trtc.io/contact) にてご連絡先をご登録ください。担当者より折り返しご連絡いたします。

@@ -206,4 +206,4 @@ ai-service-skill/
 
 ## 联系我们
 
-需要技术支持或企业定制优惠？访问 [trtc.io/contact](https://trtc.io/contact)，我们的团队将尽快与您联系。
+如需技术支持或企业定制优惠，可访问 [trtc.io/contact](https://trtc.io/contact) 提交联系方式，我们的团队将尽快与您联系。

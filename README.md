@@ -208,4 +208,4 @@ ai-service-skill/
 
 ## Contact Us
 
-Need technical support or enterprise pricing? Visit [trtc.io/contact](https://trtc.io/contact) and our team will get back to you.
+Need technical support or enterprise pricing? Submit your contact information at [trtc.io/contact](https://trtc.io/contact) and our team will get back to you shortly.
